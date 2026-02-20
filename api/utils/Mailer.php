@@ -68,6 +68,8 @@ class Mailer
                     'allow_self_signed' => true
                 )
             );
+            $mail->Timeout = 5; // Timeout checking after 5 seconds
+            $mail->Timelimit = 5; // Limit execution time
 
             //Recipients
             $mail->setFrom($this->username, 'Rappelez-moi.co');

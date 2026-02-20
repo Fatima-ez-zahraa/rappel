@@ -180,7 +180,7 @@ class User
         $fields = [];
         $values = [];
         $allowedFields = [
-            'first_name', 'last_name', 'company_name', 'siret', 'legal_form', 
+            'first_name', 'last_name', 'email', 'company_name', 'siret', 'legal_form', 
             'creation_year', 'address', 'zip', 'city', 'phone', 'sectors', 'description', 'zone'
         ];
 
@@ -199,6 +199,35 @@ class User
         $values[':id'] = $this->id;
 
         return $stmt->execute($values);
+    }
+
+    public function changePassword(string $currentPassword, string $newPassword): array
+    {
+        $query = "SELECT password FROM " . $this->table_name . " WHERE id = ? LIMIT 0,1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(1, $this->id);
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) {
+            return [false, "Utilisateur introuvable."];
+        }
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $hash = $row['password'] ?? '';
+        if (!$hash || !password_verify($currentPassword, $hash)) {
+            return [false, "Mot de passe actuel incorrect."];
+        }
+
+        $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $updateQuery = "UPDATE " . $this->table_name . " SET password = ? WHERE id = ?";
+        $updateStmt = $this->conn->prepare($updateQuery);
+        $ok = $updateStmt->execute([$newHash, $this->id]);
+
+        if (!$ok) {
+            return [false, "Echec de la mise a jour du mot de passe."];
+        }
+
+        return [true, "Mot de passe mis a jour."];
     }
 }
 ?>

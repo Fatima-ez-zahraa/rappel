@@ -181,6 +181,51 @@ class AuthController
         }
     }
 
+    public function changePassword()
+    {
+        $headers = function_exists('apache_request_headers') ? apache_request_headers() : [];
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? $_SERVER['HTTP_AUTHORISATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORISATION'] ?? '';
+
+        if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            http_response_code(401);
+            echo json_encode(["error" => "Non autorise"]);
+            return;
+        }
+
+        $token = $matches[1];
+        $payload = $this->jwt->validate($token);
+        if (!$payload) {
+            http_response_code(401);
+            echo json_encode(["error" => "Token invalide"]);
+            return;
+        }
+
+        $data = json_decode(file_get_contents("php://input"));
+        if (empty($data->current_password) || empty($data->new_password)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Mot de passe actuel et nouveau mot de passe requis."]);
+            return;
+        }
+
+        if (strlen($data->new_password) < 8) {
+            http_response_code(400);
+            echo json_encode(["error" => "Le nouveau mot de passe doit contenir au moins 8 caracteres."]);
+            return;
+        }
+
+        $payload = (array)$payload;
+        $this->user->id = $payload['id'];
+        [$ok, $message] = $this->user->changePassword((string)$data->current_password, (string)$data->new_password);
+
+        if (!$ok) {
+            http_response_code(400);
+            echo json_encode(["error" => $message]);
+            return;
+        }
+
+        echo json_encode(["message" => $message]);
+    }
+
     public function verify()
     {
         $this->verifyEmail();

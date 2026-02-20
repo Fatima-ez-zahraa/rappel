@@ -62,6 +62,8 @@ try {
                 $auth->signup();
             } elseif ($action == 'login') {
                 $auth->login();
+            } elseif ($action == 'change-password') {
+                $auth->changePassword();
             } elseif ($action == 'verify' || $action == 'verify-email') {
                 $auth->verifyEmail();
             } elseif ($action == 'resend-activation') {
@@ -153,15 +155,86 @@ try {
             }
             break;
 
+        case 'plans':
+            $company = new CompanyController();
+            if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getPlans();
+            } else {
+                http_response_code(404);
+                echo json_encode(['error' => 'Endpoint not found']);
+            }
+            break;
+
         case 'admin':
             $company = new CompanyController();
             if ($action == 'leads') {
-                $company->getAdminLeads();
+                if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+                    $company->getAdminLeads();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'POST') {
+                    $company->createAdminLead();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
+                    $company->updateAdminLead($id);
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'DELETE' && !empty($id)) {
+                    $company->deleteAdminLead($id);
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
+                }
+            } elseif ($action == 'stats') {
+                $company->getAdminStats();
+            } elseif ($action == 'providers') {
+                $company->getAdminProviders();
+            } elseif ($action == 'plans') {
+                if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+                    $company->getAdminPlans();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'POST') {
+                    $company->createAdminPlan();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
+                    $company->updateAdminPlan($id);
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'DELETE' && !empty($id)) {
+                    $company->deleteAdminPlan($id);
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
+                }
+            } elseif ($action == 'analytics') {
+                $company->getAdminAnalytics();
+            } elseif ($action == 'dispatch') {
+                if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+                    $company->getAdminDispatchOverview();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'POST') {
+                    $company->autoDispatchLeads();
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
+                }
+            } elseif ($action == 'quotes') {
+                if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+                    $company->getAdminQuotes();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'POST') {
+                    $company->createAdminQuote();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
+                    $company->updateAdminQuote($id);
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'DELETE' && !empty($id)) {
+                    $company->deleteAdminQuote($id);
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
+                }
             } elseif ($action == 'users') {
                 if ($_SERVER['REQUEST_METHOD'] == 'GET') {
                     $company->getAdminUsers();
-                } elseif ($_SERVER['REQUEST_METHOD'] == 'POST' && $id == 'role') {
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($parts[2]) && isset($parts[3]) && $parts[3] == 'role') {
                     $company->updateUserRole($parts[2]);
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'POST') {
+                    $company->createAdminUser();
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
+                    $company->updateAdminUser($id);
+                } elseif ($_SERVER['REQUEST_METHOD'] == 'DELETE' && !empty($id)) {
+                    $company->deleteAdminUser($id);
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
                 }
             } else {
                 http_response_code(404);
@@ -192,6 +265,15 @@ try {
             break;
     }
 } catch (Throwable $e) {
+    // The controllers may already emit a JSON error and throw "Unauthorized".
+    // Avoid writing a second JSON payload which breaks frontend parsing.
+    if ($e->getMessage() === 'Unauthorized') {
+        if (http_response_code() < 400) {
+            http_response_code(401);
+        }
+        exit;
+    }
+
     $errorMsg = date('[Y-m-d H:i:s] ') . "API Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine() . "\n";
     file_put_contents(__DIR__ . '/api_errors.log', $errorMsg, FILE_APPEND);
     http_response_code(500);

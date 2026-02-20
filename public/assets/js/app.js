@@ -1,0 +1,188 @@
+/* ============================================================
+   RAPPEL - Global App JS
+   ============================================================ */
+
+const API_URL = 'http://localhost/rappel/api';
+
+// ---- Auth helpers (token stored in sessionStorage for JS calls) ----
+const Auth = {
+    getToken: () => sessionStorage.getItem('rappel_token') || '',
+    setToken: (t) => sessionStorage.setItem('rappel_token', t),
+    getUser: () => {
+        try { return JSON.parse(sessionStorage.getItem('rappel_user') || 'null'); } catch { return null; }
+    },
+    setUser: (u) => sessionStorage.setItem('rappel_user', JSON.stringify(u)),
+    clear: () => { sessionStorage.removeItem('rappel_token'); sessionStorage.removeItem('rappel_user'); },
+};
+
+// ---- API fetch helper ----
+async function apiFetch(endpoint, options = {}) {
+    const token = Auth.getToken() || (window.PHP_TOKEN || '');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+    };
+    const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.message || 'Erreur API');
+    return data;
+}
+
+// ---- Header scroll effect ----
+function initHeader() {
+    const header = document.getElementById('main-header');
+    if (!header) return;
+    const update = () => {
+        if (window.scrollY > 20) {
+            header.classList.add('bg-white/80', 'backdrop-blur-xl', 'border-b', 'border-navy-100/50', 'py-3', 'shadow-sm');
+            header.classList.remove('bg-transparent', 'py-5');
+        } else {
+            header.classList.remove('bg-white/80', 'backdrop-blur-xl', 'border-b', 'border-navy-100/50', 'py-3', 'shadow-sm');
+            header.classList.add('bg-transparent', 'py-5');
+        }
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+}
+
+// ---- Mobile menu (public header) ----
+function initMobileMenu() {
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    const iconMenu = document.getElementById('icon-menu');
+    const iconClose = document.getElementById('icon-close');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', () => {
+        const isOpen = !menu.classList.contains('hidden');
+        menu.classList.toggle('hidden', isOpen);
+        menu.classList.toggle('flex', !isOpen);
+        iconMenu.classList.toggle('hidden', !isOpen);
+        iconClose.classList.toggle('hidden', isOpen);
+    });
+}
+
+// ---- Smooth scroll for anchor links ----
+function initScrollLinks() {
+    document.querySelectorAll('.scroll-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.dataset.target;
+            const el = document.getElementById(targetId);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                // Navigate to home then scroll
+                window.location.href = `/rappel/public/#${targetId}`;
+            }
+        });
+    });
+    // Handle hash on page load
+    if (window.location.hash) {
+        setTimeout(() => {
+            const el = document.getElementById(window.location.hash.substring(1));
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+    }
+}
+
+// ---- Sidebar (dashboard) ----
+let sidebarOpen = true;
+let isMobile = window.innerWidth < 1024;
+
+function updateSidebarState() {
+    const sidebar = document.getElementById('sidebar');
+    const main = document.getElementById('dashboard-main');
+    const toggleIcon = document.getElementById('toggle-icon');
+    if (!sidebar) return;
+
+    if (isMobile) {
+        sidebar.style.width = '280px';
+        main && (main.style.paddingLeft = '0');
+    } else {
+        sidebar.style.width = sidebarOpen ? '260px' : '80px';
+        main && (main.style.paddingLeft = sidebarOpen ? '260px' : '80px');
+        // Show/hide labels
+        document.querySelectorAll('.sidebar-label, .sidebar-user-info, .sidebar-logout').forEach(el => {
+            el.style.display = sidebarOpen ? '' : 'none';
+        });
+        document.querySelectorAll('.sidebar-logo-full').forEach(el => el.style.display = sidebarOpen ? '' : 'none');
+        document.querySelectorAll('.sidebar-logo-icon').forEach(el => el.style.display = sidebarOpen ? 'none' : '');
+        if (toggleIcon) {
+            toggleIcon.setAttribute('data-lucide', sidebarOpen ? 'chevron-left' : 'chevron-right');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }
+}
+
+function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    updateSidebarState();
+}
+
+function openSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.add('mobile-open');
+    if (overlay) overlay.classList.remove('hidden');
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (overlay) overlay.classList.add('hidden');
+}
+
+function initSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+
+    const handleResize = () => {
+        const wasMobile = isMobile;
+        isMobile = window.innerWidth < 1024;
+        if (isMobile !== wasMobile) {
+            if (isMobile) closeSidebar();
+            updateSidebarState();
+        }
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    updateSidebarState();
+}
+
+// ---- Toast notifications ----
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800',
+    };
+    toast.className = `fixed bottom-6 right-6 z-[9999] px-6 py-4 rounded-2xl border font-bold shadow-premium
+                       ${colors[type] || colors.info} animate-fade-in`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+
+// ---- Loading spinner helper ----
+function setButtonLoading(btn, loading, originalText) {
+    if (loading) {
+        btn.disabled = true;
+        btn.dataset.originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner"></span>';
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = originalText || btn.dataset.originalText || 'Envoyer';
+    }
+}
+
+// ---- Init on DOM ready ----
+document.addEventListener('DOMContentLoaded', () => {
+    initHeader();
+    initMobileMenu();
+    initScrollLinks();
+    initSidebar();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+});

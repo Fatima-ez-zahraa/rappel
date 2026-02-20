@@ -69,9 +69,16 @@ class LeadsController
     public function create($returnResult = false)
     {
         $data = json_decode(file_get_contents("php://input"));
+        error_log("Lead Create Data: " . print_r($data, true));
+        
         // For internal calls (manual creation), data might be passed directly
         if (!$data && property_exists($this, 'tempData')) {
             $data = $this->tempData;
+        }
+
+        // Handle first_name + last_name -> name
+        if (empty($data->name) && (!empty($data->first_name) || !empty($data->last_name))) {
+            $data->name = trim(($data->first_name ?? '') . ' ' . ($data->last_name ?? ''));
         }
 
         if (!empty($data->name) && !empty($data->phone)) {
@@ -91,12 +98,12 @@ class LeadsController
             $this->lead->name = $data->name;
             $this->lead->phone = $data->phone;
             $this->lead->email = $data->email ?? null;
-            $this->lead->sector = $data->sector ?? 'Général';
+            $this->lead->sector = $data->service_type ?? ($data->sector ?? 'Général'); // Frontend sends service_type
             $this->lead->need = $data->need ?? '';
             $this->lead->time_slot = $data->time_slot ?? 'Non spécifié';
             $this->lead->budget = $data->budget ?? 0;
             $this->lead->status = 'pending';
-            $this->lead->address = $data->address ?? '';
+            $this->lead->address = $data->address ?? ($data->zip_code ?? ''); // Use zip if address empty
 
             if ($this->lead->create()) {
                 if ($returnResult) return $this->lead->id;
@@ -104,13 +111,21 @@ class LeadsController
                 http_response_code(201);
                  
                 // Send Email
+                // Wrapped in try-catch to prevent hanging if SMTP fails
                 $mailer = new Mailer();
                 if ($this->lead->email) {
-                    $mailer->sendConfirmation($this->lead->email, $this->lead->name, [
-                        'need' => $this->lead->need,
-                        'time_slot' => $this->lead->time_slot,
-                        'phone' => $this->lead->phone
-                    ]);
+                    try {
+                        $mailer->sendConfirmation($this->lead->email, $this->lead->name, [
+                            'need' => $this->lead->need,
+                            'time_slot' => $this->lead->time_slot,
+                            'phone' => $this->lead->phone
+                        ]);
+                    } catch (Exception $e) {
+                         error_log("Email sending failed: " . $e->getMessage());
+                         // Continue execution even if email fails
+                    } catch (Throwable $t) {
+                         error_log("Email sending fatal error: " . $t->getMessage());
+                    }
                 }
 
                 echo json_encode(["message" => "Lead créé.", "id" => $this->lead->id]);
@@ -122,7 +137,7 @@ class LeadsController
         } else {
             if ($returnResult) return false;
             http_response_code(400);
-            echo json_encode(["error" => "Données incomplètes (nom et téléphone requis)."]);
+            echo json_encode(["error" => "Données incomplètes (nom et téléphone requis). Data received: " . print_r($data, true)]);
         }
     }
 

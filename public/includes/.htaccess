@@ -1,0 +1,7 @@
+Options -Indexes
+
+# Prevent direct access to includes
+<FilesMatch "^(auth|head|header|sidebar|dashboard_layout|logout)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
