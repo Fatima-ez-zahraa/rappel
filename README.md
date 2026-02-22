@@ -1,6 +1,6 @@
 # Rappel Project
 
-## Structure by Antigravity
+## Structure
 
 - **Frontend**: `client/` (React + Vite)
 - **Backend**: `api/` (PHP Native)
