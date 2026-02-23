@@ -6,7 +6,7 @@ $isAdminTheme = true;
 $pageTitle = 'Admin - Tableau de bord';
 $token = getToken();
 $view = $_GET['view'] ?? 'overview';
-$allowedViews = ['overview', 'plans', 'providers', 'leads', 'dispatch', 'analytics'];
+$allowedViews = ['overview', 'plans', 'providers', 'leads', 'dispatch', 'analytics', 'settings'];
 if (!in_array($view, $allowedViews, true)) {
     $view = 'overview';
 }
@@ -16,20 +16,14 @@ $showProviders = $showOverview || $view === 'providers';
 $showLeads = $showOverview || $view === 'leads';
 $showDispatch = $showOverview || $view === 'dispatch';
 $showAnalytics = $showOverview || $view === 'analytics';
+$showSettings = $view === 'settings';
 ?>
 <?php include __DIR__ . '/../includes/dashboard_layout_top.php'; ?>
 
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-    <div>
-        <div class="flex items-center gap-3 mb-2">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center"
-                 style="background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 0 20px rgba(99,102,241,0.4);">
-                <i data-lucide="shield-check" class="text-white" style="width:18px;height:18px;"></i>
-            </div>
-            <span class="text-xs font-bold uppercase tracking-widest" style="color:#818cf8;">Panneau d'administration</span>
-        </div>
-        <h1 class="text-3xl font-display font-bold text-navy-950">Pilotage Admin</h1>
-        <p class="text-navy-500 font-medium mt-1">Prestataires, leads, dispatch automatique et analytics</p>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+    <div class="animate-fade-in-up">
+        <h1 class="text-4xl font-display font-black text-white tracking-tight">Pilotage Admin</h1>
+        <p class="text-navy-400 font-medium mt-1 text-sm">Supervision en temps réel des flux et opportunités</p>
     </div>
 
     <!-- View selector tabs -->
@@ -42,18 +36,16 @@ $showAnalytics = $showOverview || $view === 'analytics';
             'leads'     => ['icon' => 'inbox', 'label' => 'Leads'],
             'dispatch'  => ['icon' => 'shuffle', 'label' => 'Dispatch'],
             'analytics' => ['icon' => 'bar-chart-3', 'label' => 'Analytics'],
+            'settings'  => ['icon' => 'settings', 'label' => 'Parametres'],
         ];
         foreach ($views as $viewKey => $viewMeta):
             $isCurrentView = ($view === $viewKey);
         ?>
         <a href="?view=<?= $viewKey ?>"
-           class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 <?= $isCurrentView
-               ? 'text-white'
-               : 'hover:opacity-80' ?>"
-           style="<?= $isCurrentView
-               ? 'background:rgba(99,102,241,0.25);border:1px solid rgba(99,102,241,0.4);color:#c7d2fe;'
-               : 'background:rgba(15,23,42,0.65);border:1px solid rgba(100,116,139,0.45);color:#b8c6dd;' ?>">
-            <i data-lucide="<?= $viewMeta['icon'] ?>" style="width:13px;height:13px;"></i>
+           class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-300 border <?= $isCurrentView
+               ? 'bg-accent-500/20 border-accent-500/40 text-accent-400 shadow-[0_0_15px_rgba(124,203,99,0.1)]'
+               : 'bg-white/5 border-white/10 text-navy-400 hover:bg-white/10 hover:border-white/20' ?>">
+            <i data-lucide="<?= $viewMeta['icon'] ?>" style="width:14px;height:14px;"></i>
             <?= $viewMeta['label'] ?>
         </a>
         <?php endforeach; ?>
@@ -61,14 +53,17 @@ $showAnalytics = $showOverview || $view === 'analytics';
 </div>
 
 
-<div id="admin-stats" class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
-    <?php for ($i = 0; $i < 6; $i++): ?>
-    <div class="card p-5 animate-pulse">
-        <div class="h-3 bg-navy-100 rounded w-2/3 mb-3"></div>
-        <div class="h-7 bg-navy-100 rounded w-1/2"></div>
+<?php if (!$showSettings): ?>
+<div id="admin-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+    <?php for ($i = 0; $i < 4; $i++): ?>
+    <div class="card p-6 min-h-[120px] flex flex-col justify-center animate-pulse">
+        <div class="w-10 h-10 rounded-xl bg-white/5 mb-4"></div>
+        <div class="h-3 bg-white/10 rounded w-2/3 mb-2"></div>
+        <div class="h-6 bg-white/10 rounded w-1/2"></div>
     </div>
     <?php endfor; ?>
 </div>
+<?php endif; ?>
 
 <?php if ($showPlans): ?>
 <section id="admin-plans" class="card p-6 mb-8">
@@ -123,6 +118,7 @@ $showAnalytics = $showOverview || $view === 'analytics';
                     <th class="py-2 pr-3">Forfait</th>
                     <th class="py-2 pr-3">Leads J/S/M</th>
                     <th class="py-2 pr-3">Total</th>
+                    <th class="py-2 pr-3 text-right">Abonnement</th>
                 </tr>
             </thead>
             <tbody id="providers-table-body">
@@ -187,21 +183,6 @@ $showAnalytics = $showOverview || $view === 'analytics';
         <h2 class="text-lg font-display font-bold text-navy-950">Forfaits et cadence des leads</h2>
     </div>
 
-    <div class="grid grid-cols-3 gap-4 mb-6" id="leads-psm-cards">
-        <div class="rounded-xl border border-navy-100 p-4 text-center">
-            <p class="text-xs font-bold text-navy-500 uppercase">Leads / jour</p>
-            <p class="text-2xl font-display font-bold text-navy-950" id="metric-day">0</p>
-        </div>
-        <div class="rounded-xl border border-navy-100 p-4 text-center">
-            <p class="text-xs font-bold text-navy-500 uppercase">Leads / semaine</p>
-            <p class="text-2xl font-display font-bold text-navy-950" id="metric-week">0</p>
-        </div>
-        <div class="rounded-xl border border-navy-100 p-4 text-center">
-            <p class="text-xs font-bold text-navy-500 uppercase">Leads / mois</p>
-            <p class="text-2xl font-display font-bold text-navy-950" id="metric-month">0</p>
-        </div>
-    </div>
-
     <div class="grid lg:grid-cols-2 gap-5">
         <div class="rounded-xl border border-navy-100 p-4 overflow-auto">
             <p class="text-xs font-bold uppercase tracking-wider text-navy-500 mb-2">Forfait par prestataire</p>
@@ -236,11 +217,74 @@ $showAnalytics = $showOverview || $view === 'analytics';
 </section>
 <?php endif; ?>
 
+<?php if ($showSettings): ?>
+<section id="admin-settings" class="grid lg:grid-cols-2 gap-6 mb-8">
+    <div class="card p-6">
+        <div class="mb-5">
+            <h2 class="text-lg font-display font-bold text-navy-950">Profil administrateur</h2>
+            <p class="text-sm text-navy-500 font-medium">Mettez a jour vos informations de compte.</p>
+        </div>
+
+        <form id="admin-profile-form" class="space-y-4">
+            <div class="grid md:grid-cols-2 gap-3">
+                <div>
+                    <label for="admin-first-name" class="form-label">Prenom</label>
+                    <input id="admin-first-name" class="form-input rounded-xl" placeholder="Prenom">
+                </div>
+                <div>
+                    <label for="admin-last-name" class="form-label">Nom</label>
+                    <input id="admin-last-name" class="form-input rounded-xl" placeholder="Nom">
+                </div>
+            </div>
+
+            <div>
+                <label for="admin-email" class="form-label">Email</label>
+                <input id="admin-email" type="email" class="form-input rounded-xl" placeholder="admin@rappel.fr" required>
+            </div>
+
+            <div>
+                <label for="admin-phone" class="form-label">Telephone</label>
+                <input id="admin-phone" class="form-input rounded-xl" placeholder="+33 6 00 00 00 00">
+            </div>
+
+            <button type="submit" id="admin-profile-submit" class="btn btn-accent rounded-xl">Enregistrer le profil</button>
+        </form>
+    </div>
+
+    <div class="card p-6">
+        <div class="mb-5">
+            <h2 class="text-lg font-display font-bold text-navy-950">Securite</h2>
+            <p class="text-sm text-navy-500 font-medium">Modifiez votre mot de passe administrateur.</p>
+        </div>
+
+        <form id="admin-password-form" class="space-y-4">
+            <div>
+                <label for="admin-current-password" class="form-label">Mot de passe actuel</label>
+                <input id="admin-current-password" type="password" class="form-input rounded-xl" required>
+            </div>
+
+            <div>
+                <label for="admin-new-password" class="form-label">Nouveau mot de passe</label>
+                <input id="admin-new-password" type="password" class="form-input rounded-xl" minlength="8" required>
+            </div>
+
+            <div>
+                <label for="admin-confirm-password" class="form-label">Confirmation</label>
+                <input id="admin-confirm-password" type="password" class="form-input rounded-xl" minlength="8" required>
+            </div>
+
+            <button type="submit" id="admin-password-submit" class="btn btn-primary rounded-xl">Mettre a jour le mot de passe</button>
+        </form>
+    </div>
+</section>
+<?php endif; ?>
+
 <?php
 $safeToken = addslashes($token ?? '');
 $extraScript = <<<'JS'
 <script>
 const PHP_TOKEN = '__PHP_TOKEN__';
+const ADMIN_VIEW = '__ADMIN_VIEW__';
 let adminPlansCache = [];
 
 function escapeHtml(input) {
@@ -265,7 +309,7 @@ async function loadAdminAll() {
             apiFetch('/admin/plans')
         ]);
 
-        renderStats(stats || {});
+        renderStats(stats || {}, analytics || {});
         renderAdminPlans(Array.isArray(plans) ? plans : []);
         renderProviders(Array.isArray(providers) ? providers : []);
         renderLeads(Array.isArray(leads) ? leads : []);
@@ -275,6 +319,92 @@ async function loadAdminAll() {
         console.error('Admin load error:', err);
         if (typeof showToast === 'function') {
             showToast('Erreur de chargement des données admin', 'error');
+        }
+    }
+}
+
+async function loadAdminSettings() {
+    if (PHP_TOKEN) Auth.setToken(PHP_TOKEN);
+    try {
+        const profile = await apiFetch('/profile');
+        fillSettingsForm(profile?.user || {});
+    } catch (err) {
+        console.error('Settings load error:', err);
+        if (typeof showToast === 'function') {
+            showToast('Erreur de chargement des parametres', 'error');
+        }
+    }
+}
+
+function fillSettingsForm(user) {
+    const firstName = document.getElementById('admin-first-name');
+    const lastName = document.getElementById('admin-last-name');
+    const email = document.getElementById('admin-email');
+    const phone = document.getElementById('admin-phone');
+
+    if (firstName) firstName.value = user.first_name || '';
+    if (lastName) lastName.value = user.last_name || '';
+    if (email) email.value = user.email || '';
+    if (phone) phone.value = user.phone || '';
+}
+
+async function submitAdminProfile(event) {
+    event.preventDefault();
+    const payload = {
+        first_name: (document.getElementById('admin-first-name')?.value || '').trim(),
+        last_name: (document.getElementById('admin-last-name')?.value || '').trim(),
+        email: (document.getElementById('admin-email')?.value || '').trim(),
+        phone: (document.getElementById('admin-phone')?.value || '').trim()
+    };
+
+    try {
+        await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify(payload) });
+        if (typeof showToast === 'function') {
+            showToast('Profil admin mis a jour', 'success');
+        }
+        await loadAdminSettings();
+    } catch (err) {
+        console.error('Profile update error:', err);
+        if (typeof showToast === 'function') {
+            showToast('Echec de mise a jour du profil', 'error');
+        }
+    }
+}
+
+async function submitAdminPassword(event) {
+    event.preventDefault();
+    const currentPassword = document.getElementById('admin-current-password')?.value || '';
+    const newPassword = document.getElementById('admin-new-password')?.value || '';
+    const confirmPassword = document.getElementById('admin-confirm-password')?.value || '';
+
+    if (newPassword.length < 8) {
+        if (typeof showToast === 'function') showToast('Le nouveau mot de passe doit contenir 8 caracteres minimum', 'error');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        if (typeof showToast === 'function') showToast('La confirmation du mot de passe ne correspond pas', 'error');
+        return;
+    }
+
+    try {
+        await apiFetch('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword
+            })
+        });
+
+        const form = document.getElementById('admin-password-form');
+        if (form) form.reset();
+        if (typeof showToast === 'function') {
+            showToast('Mot de passe mis a jour', 'success');
+        }
+    } catch (err) {
+        console.error('Password update error:', err);
+        if (typeof showToast === 'function') {
+            showToast('Echec de mise a jour du mot de passe', 'error');
         }
     }
 }
@@ -373,14 +503,39 @@ async function deletePlan(planId) {
     }
 }
 
-function renderStats(s) {
+async function toggleSubscription(providerId, newStatus) {
+    if (!providerId) return;
+    try {
+        await apiFetch(`/admin/users/${providerId}`, { 
+            method: 'PATCH', 
+            body: JSON.stringify({ subscription_status: newStatus }) 
+        });
+        if (typeof showToast === 'function') {
+            showToast(`Abonnement ${newStatus === 'active' ? 'activé' : 'désactivé'}`, 'success');
+        }
+        await loadAdminAll();
+    } catch (err) {
+        console.error('Subscription toggle error:', err);
+        if (typeof showToast === 'function') {
+            showToast('Erreur lors de la modification de l\'abonnement', 'error');
+        }
+    }
+}
+
+function renderStats(s, analytics = {}) {
+    const leadsDay = s.leads_today ?? analytics.leads_today ?? 0;
+    const leadsWeek = s.leads_week ?? analytics.leads_week ?? 0;
+    const leadsMonth = s.leads_month ?? analytics.leads_month ?? 0;
     const cards = [
         { label: 'Prestataires', value: s.total_providers ?? 0, icon: 'users' },
-        { label: 'Leads total', value: s.total_leads ?? 0, icon: 'inbox' },
+        {
+            label: 'Leads total',
+            value: s.total_leads ?? 0,
+            icon: 'inbox',
+            meta: `Jour: ${leadsDay} | Semaine: ${leadsWeek} | Mois: ${leadsMonth}`
+        },
         { label: 'Abonnements actifs', value: s.active_subscriptions ?? 0, icon: 'badge-check' },
-        { label: 'Revenu mois', value: (s.monthly_revenue ?? 0) + ' EUR', icon: 'trending-up' },
-        { label: 'Leads jour', value: s.leads_today ?? 0, icon: 'calendar-days' },
-        { label: 'Leads semaine', value: s.leads_week ?? 0, icon: 'calendar-range' }
+        { label: 'Revenu mois', value: (s.monthly_revenue ?? 0) + ' EUR', icon: 'trending-up' }
     ];
 
     const html = cards.map((card) => `
@@ -390,6 +545,7 @@ function renderStats(s) {
             </div>
             <p class="text-2xl font-display font-bold text-navy-950">${escapeHtml(card.value)}</p>
             <p class="text-xs text-navy-500 font-bold uppercase tracking-wider mt-1">${escapeHtml(card.label)}</p>
+            ${card.meta ? `<p class="text-xs text-navy-500 mt-2">${escapeHtml(card.meta)}</p>` : ''}
         </div>
     `).join('');
 
@@ -417,6 +573,10 @@ function renderProviders(providers) {
         const niches = Array.isArray(p.sectors_list) ? p.sectors_list.join(', ') : '';
         const plan = p.plan_name || 'Forfait inactif';
         const cadence = `${p.assigned_leads_day || 0} / ${p.assigned_leads_week || 0} / ${p.assigned_leads_month || 0}`;
+        const isActive = p.subscription_status === 'active';
+        const actionBtn = isActive 
+            ? `<button onclick="toggleSubscription('${p.id}', 'inactive')" class="btn btn-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs px-2 py-1">Désactiver</button>`
+            : `<button onclick="toggleSubscription('${p.id}', 'active')" class="btn btn-sm rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-2 py-1 border border-emerald-600">Activer</button>`;
 
         return `
             <tr class="border-b border-navy-50 align-top">
@@ -429,6 +589,7 @@ function renderProviders(providers) {
                 <td class="py-3 pr-3 text-navy-700">${escapeHtml(plan)}</td>
                 <td class="py-3 pr-3 text-navy-700">${escapeHtml(cadence)}</td>
                 <td class="py-3 pr-3 font-bold text-navy-900">${escapeHtml(p.assigned_leads_total || 0)}</td>
+                <td class="py-3 pr-3 text-right">${actionBtn}</td>
             </tr>
         `;
     }).join('');
@@ -483,13 +644,6 @@ function renderDispatchOverview(dispatchData) {
 }
 
 function renderAnalytics(analytics) {
-    const day = document.getElementById('metric-day');
-    const week = document.getElementById('metric-week');
-    const month = document.getElementById('metric-month');
-    if (day) day.textContent = analytics.leads_today ?? 0;
-    if (week) week.textContent = analytics.leads_week ?? 0;
-    if (month) month.textContent = analytics.leads_month ?? 0;
-
     const plansBody = document.getElementById('plans-table-body');
     if (plansBody) {
         const providers = Array.isArray(analytics.providers) ? analytics.providers : [];
@@ -560,19 +714,36 @@ async function runAutoDispatch() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadAdminAll();
+    if (ADMIN_VIEW === 'settings') {
+        loadAdminSettings();
+    } else {
+        loadAdminAll();
+    }
+
     const dispatchBtn = document.getElementById('dispatch-btn');
     if (dispatchBtn) {
         dispatchBtn.addEventListener('click', runAutoDispatch);
     }
+
     const planForm = document.getElementById('plan-form');
     if (planForm) {
         planForm.addEventListener('submit', submitPlanForm);
+    }
+
+    const profileForm = document.getElementById('admin-profile-form');
+    if (profileForm) {
+        profileForm.addEventListener('submit', submitAdminProfile);
+    }
+
+    const passwordForm = document.getElementById('admin-password-form');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', submitAdminPassword);
     }
 });
 </script>
 JS;
 $extraScript = str_replace('__PHP_TOKEN__', $safeToken, $extraScript);
+$extraScript = str_replace('__ADMIN_VIEW__', addslashes($view), $extraScript);
 ?>
 
 <?php include __DIR__ . '/../includes/dashboard_layout_bottom.php'; ?>

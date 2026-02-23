@@ -178,11 +178,47 @@ function setButtonLoading(btn, loading, originalText) {
     }
 }
 
+// ---- Cookie Consent ----
+function initCookies() {
+    const banner = document.getElementById('cookie-banner');
+    if (!banner) return;
+
+    const consent = localStorage.getItem('cookie_consent');
+    if (!consent) {
+        setTimeout(() => {
+            banner.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
+            banner.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        }, 1500);
+    }
+}
+
+function acceptCookies() {
+    localStorage.setItem('cookie_consent', 'accepted');
+    hideCookieBanner();
+    // Here you would normally trigger GTM or other analytics scripts
+    showToast('Merci de votre confiance !', 'success');
+}
+
+function refuseCookies() {
+    localStorage.setItem('cookie_consent', 'refused');
+    hideCookieBanner();
+    showToast('Cookies refusés.', 'info');
+}
+
+function hideCookieBanner() {
+    const banner = document.getElementById('cookie-banner');
+    if (banner) {
+        banner.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
+        banner.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+    }
+}
+
 // ---- Init on DOM ready ----
 document.addEventListener('DOMContentLoaded', () => {
     initHeader();
     initMobileMenu();
     initScrollLinks();
     initSidebar();
+    initCookies();
     if (typeof lucide !== 'undefined') lucide.createIcons();
 });

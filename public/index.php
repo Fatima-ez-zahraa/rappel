@@ -308,9 +308,28 @@ $pageTitle = 'Accueil';
                             <!-- Filled by JS -->
                         </div>
 
-                        <div class="p-4 bg-accent-50/80 border border-accent-100 rounded-xl text-xs text-navy-500 font-medium flex items-start gap-3">
-                            <i data-lucide="shield-check" class="text-accent-500 shrink-0 mt-0.5" style="width:14px;height:14px;"></i>
-                            <span>En validant, vous acceptez d'être contacté par nos partenaires. Vos données sont sécurisées et jamais revendues sans accord.</span>
+                        <div class="p-5 bg-accent-50/80 border border-accent-100 rounded-2xl text-[13px] text-navy-600 font-medium space-y-3">
+                            <div class="flex items-start gap-3">
+                                <i data-lucide="shield-check" class="text-accent-500 shrink-0 mt-0.5" style="width:16px;height:16px;"></i>
+                                <div class="space-y-3">
+                                    <p>
+                                        En validant ce formulaire, vous demandez expressément à être contacté par un ou plusieurs professionnels partenaires via le Service <strong>rappellez-moi.co</strong>.
+                                    </p>
+                                    <p>
+                                        Vous consentez à être contacté par téléphone, SMS ou email dans le cadre exclusif de votre demande. Ce consentement est conforme à la réglementation applicable au démarchage téléphonique et au RGPD.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mandatory Checkbox -->
+                        <div class="flex items-start gap-3 px-2 py-1">
+                            <div class="flex items-center h-5">
+                                <input id="consent-checkbox" type="checkbox" class="w-5 h-5 rounded border-navy-200 text-accent-600 focus:ring-accent-500 cursor-pointer">
+                            </div>
+                            <label for="consent-checkbox" class="text-sm font-bold text-navy-900 cursor-pointer select-none">
+                                J’accepte d’être contacté conformément au texte ci-dessus. <span class="text-red-500">*</span>
+                            </label>
                         </div>
 
                         <div id="lead-error" class="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-bold border border-red-100 hidden flex items-center gap-2">
@@ -339,12 +358,23 @@ $pageTitle = 'Accueil';
                             </button>
                         </div>
 
-                        <div id="lead-form-actions" class="flex gap-3">
-                            <button onclick="goToLeadStep(3)" class="btn btn-outline flex-1 rounded-2xl border-navy-200 text-navy-500">Modifier</button>
-                            <button onclick="submitLead()" id="btn-submit-lead" class="btn btn-primary flex-1 rounded-2xl shadow-lg shadow-brand-400/20 flex items-center justify-center gap-2">
-                                <i data-lucide="send" style="width:18px;height:18px;"></i>
-                                Valider ma demande
-                            </button>
+                        <div id="lead-form-actions" class="flex flex-col gap-4">
+                            <div class="flex gap-3">
+                                <button onclick="goToLeadStep(3)" class="btn btn-outline flex-1 rounded-2xl border-navy-200 text-navy-500">Modifier</button>
+                                <button onclick="submitLead()" id="btn-submit-lead" class="btn btn-primary flex-1 rounded-2xl shadow-lg shadow-brand-400/20 flex items-center justify-center gap-2">
+                                    <i data-lucide="send" style="width:18px;height:18px;"></i>
+                                    Valider ma demande
+                                </button>
+                            </div>
+                            
+                            <div class="space-y-1 mt-2">
+                                <p class="text-[11px] text-center text-navy-400 font-medium italic">
+                                    En validant, vous acceptez notre <a href="/rappel/public/legal.php#confidentialite" class="text-navy-600 font-bold hover:underline">Politique de confidentialité</a>.
+                                </p>
+                                <p class="text-[11px] text-center text-navy-400 font-medium italic">
+                                    L’utilisation du Service implique l’acceptation des <a href="/rappel/public/legal.php#cgu" class="text-navy-600 font-bold hover:underline">CGU</a>.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -383,26 +413,9 @@ $pageTitle = 'Accueil';
         </div>
     </section>
 
-    <!-- ===== FOOTER ===== -->
-    <footer class="relative bg-navy-950 text-white py-16 px-4 overflow-hidden" id="legal">
-        <div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-accent-500/50 to-transparent"></div>
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
-            <div class="flex flex-col items-center md:items-start gap-4">
-                <img src="/rappel/public/assets/img/logo.png" alt="Rappelez-moi" class="h-10 w-auto object-contain brightness-0 invert">
-                <p class="text-navy-300 text-sm max-w-xs text-center md:text-left font-medium">
-                    La plateforme de mise en relation intelligente entre particuliers et experts de confiance.
-                </p>
-            </div>
-            <div class="flex flex-col items-center md:items-end gap-3">
-                <p class="text-navy-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-4">
-                    &copy; 2026 Rappelez-moi. Tous droits réservés.
-                </p>
-            </div>
-        </div>
-    </footer>
-</main>
-
-<script src="/rappel/public/assets/js/app.js"></script>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
+<!-- Dashboard JS -->
+<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
 <script>
 // ---- Sector Carousel ----
 const sectors = [
@@ -577,6 +590,17 @@ async function submitLead() {
     const btn = document.getElementById('btn-submit-lead');
     const errEl = document.querySelector('#lead-error span');
     const errContainer = document.getElementById('lead-error');
+
+    const checkbox = document.getElementById('consent-checkbox');
+    if (checkbox && !checkbox.checked) {
+        errEl.textContent = 'Veuillez accepter d\'être contacté pour valider votre demande.';
+        errContainer.classList.remove('hidden');
+        checkbox.closest('div').parentElement.classList.add('animate-shake', 'text-red-500');
+        setTimeout(() => {
+            checkbox.closest('div').parentElement.classList.remove('animate-shake', 'text-red-500');
+        }, 1000);
+        return;
+    }
 
     errContainer.classList.add('hidden');
     setButtonLoading(btn, true);

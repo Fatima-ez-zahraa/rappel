@@ -1,8 +1,10 @@
     </div><!-- end page content -->
 </main><!-- end dashboard-main -->
 
+<?php include __DIR__ . '/cookie_banner.php'; ?>
+
 <!-- Dashboard JS -->
-<script src="/rappel/public/assets/js/app.js"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
 <script>
 // Initialize Lucide icons
 if (typeof lucide !== 'undefined') lucide.createIcons();

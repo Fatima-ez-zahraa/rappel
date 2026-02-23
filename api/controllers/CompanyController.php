@@ -695,14 +695,14 @@ class CompanyController {
 
         $providersStmt = $this->db->prepare("SELECT id, email, first_name, last_name, company_name, is_verified, subscription_status, sectors
                                              FROM user_profiles
-                                             WHERE role = 'provider'
+                                             WHERE role = 'provider' AND subscription_status = 'active' AND is_verified = 1
                                              ORDER BY created_at ASC");
         $providersStmt->execute();
         $providers = $providersStmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($providers)) {
             http_response_code(400);
-            echo json_encode(["error" => "Aucun prestataire disponible pour le dispatch."]);
+            echo json_encode(["error" => "Aucun prestataire actif et qualifié n'est disponible pour le dispatch."]);
             return;
         }
 
@@ -750,14 +750,19 @@ class CompanyController {
             $matchingProviders = [];
             foreach ($providers as $provider) {
                 $providerSectors = array_map(function ($sector) {
-                    return strtolower((string)$sector);
+                    return strtolower(trim((string)$sector));
                 }, $provider['sectors_list'] ?? []);
                 if ($leadSectorLower !== '' && in_array($leadSectorLower, $providerSectors, true)) {
                     $matchingProviders[] = $provider;
                 }
             }
 
-            $candidateProviders = !empty($matchingProviders) ? $matchingProviders : $providers;
+            // We MUST only assign leads to providers that match the sector. No fallback.
+            if (empty($matchingProviders)) {
+                continue;
+            }
+
+            $candidateProviders = $matchingProviders;
             $bestProvider = null;
             $bestScore = PHP_INT_MAX;
 
@@ -774,10 +779,9 @@ class CompanyController {
 
                 $totalAssigned = $providerLoad[$providerId] ?? 0;
                 $sectorAssigned = $providerSectorLoad[$providerId][$leadSectorLower] ?? 0;
-                $inactivePenalty = (($candidate['subscription_status'] ?? 'inactive') === 'active') ? 0 : 3;
-                $unverifiedPenalty = ((int)($candidate['is_verified'] ?? 0) === 1) ? 0 : 2;
 
-                $score = ($totalAssigned * 2) + $sectorAssigned + $inactivePenalty + $unverifiedPenalty;
+                // Lower score is better: simple load balancing math.
+                $score = ($totalAssigned * 2) + $sectorAssigned;
                 if ($score < $bestScore) {
                     $bestScore = $score;
                     $bestProvider = $candidate;

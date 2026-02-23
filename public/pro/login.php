@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 if (isLoggedIn() && isVerified()) {
+    if (isAdmin()) {
+        header('Location: /rappel/public/admin/dashboard.php');
+        exit;
+    }
     header('Location: /rappel/public/pro/dashboard.php');
     exit;
 }
@@ -86,7 +90,7 @@ $redirect = $_GET['redirect'] ?? '/rappel/public/pro/dashboard.php';
     </div>
 </div>
 
-<script src="/rappel/public/assets/js/app.js"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
 <script>
 const REDIRECT_URL = '<?= htmlspecialchars($redirect) ?>';
 
@@ -121,8 +125,12 @@ async function handleLogin(e) {
         Auth.setToken(token);
         Auth.setUser(user);
 
-        // Redirect
-        window.location.href = REDIRECT_URL;
+        // Redirect based on role
+        if (user.role === 'admin') {
+            window.location.href = '/rappel/public/admin/dashboard.php';
+        } else {
+            window.location.href = REDIRECT_URL;
+        }
 
     } catch (err) {
         errText.textContent = err.message || 'Identifiants invalides.';

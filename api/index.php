@@ -259,6 +259,14 @@ try {
             }
             break;
 
+        case '':
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'API Rappelez-moi est en ligne',
+                'version' => '1.0'
+            ]);
+            break;
+
         default:
             http_response_code(404);
             echo json_encode(['error' => 'Endpoint not found']);

@@ -2,14 +2,13 @@
 
 ## Structure
 
-- **Frontend**: `client/` (React + Vite)
+- **Frontend**: `public/` (php)
 - **Backend**: `api/` (PHP Native)
-- **Database**: `database/` (MariaDB Schema)
+- **Database**: `database/` (MariaDB )
 
 ## Prerequisites
 
 - **XAMPP** (PHP 8.2+, MariaDB, Apache)
-- **Node.js** (v18+)
 
 ## Setup & Running
 
@@ -21,7 +20,7 @@
    DB_NAME=rappel
    DB_USER=root
    DB_PASS=
-   DB_PORT=3307  <-- IMPORTANT: XAMPP MySQL is on 3307
+   DB_PORT=3308  <-- IMPORTANT: XAMPP MySQL is on 3308
    ```
 3. Run the setup script to create the DB and import schema:
    ```bash
@@ -34,21 +33,13 @@ The backend runs via XAMPP's Apache.
 - URL: `http://localhost/rappel/api/`
 - Test: Open `http://localhost/rappel/api/` in your browser. You should see `{"status":"online", ...}`.
 
-### 3. Frontend (React)
-1. Open a terminal in the `client/` folder:
-   ```bash
-   cd client
-   ```
-2. Install dependencies (first time only):
-   ```bash
-   npm install
-   ```
-3. Start the dev server:
-   ```bash
-   npm run dev
-   ```
 4. Access the app at the URL shown (usually `http://localhost:5173`).
 
 ## Configuration
+<<<<<<< HEAD
 - **Frontend API URL**: Configured in `client/.env` (or `.env` in root if symlinked/loaded).
   - Ensure `VITE_API_URL` points to your backend (e.g., `http://localhost/rappel/api`).
+=======
+- **Frontend API URL**: Configured in `public/.env` (or `.env` in root if symlinked/loaded).
+  - Ensure `VITE_API_URL` points to your backend (e.g., `http://localhost/rappel/api`).
+>>>>>>> 3c84915 (UPDATE)

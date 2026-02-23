@@ -18,19 +18,23 @@ $sidebarLogo = '/rappel/public/assets/img/logo.png';
 $sidebarLogoFullClass = $isAdminArea ? 'h-12 w-auto object-contain sidebar-logo-full' : 'h-10 w-auto object-contain sidebar-logo-full';
 $sidebarLogoIconClass = $isAdminArea ? 'h-9 w-auto object-contain sidebar-logo-icon hidden' : 'h-8 w-auto object-contain sidebar-logo-icon hidden';
 
-$menuItems = [
-    ['icon' => 'layout-dashboard', 'label' => 'Tableau de bord', 'path' => '/rappel/public/pro/dashboard.php'],
-    ['icon' => 'credit-card', 'label' => 'Plans & Tarifs', 'path' => '/rappel/public/pro/pricing.php'],
-    ['icon' => 'settings', 'label' => 'Parametres', 'path' => '/rappel/public/pro/settings.php'],
-];
+$menuItems = [];
 
 if ($isAdminUser) {
-    $menuItems[] = ['icon' => 'shield', 'label' => 'Vue globale', 'path' => '/rappel/public/admin/dashboard.php?view=overview', 'is_admin' => true];
+    $menuItems[] = ['icon' => 'shield', 'label' => 'Vue globale', 'path' => '/rappel/public/admin/dashboard.php?view=overview', 'admin_view' => 'overview', 'is_admin' => true];
+} else {
+    $menuItems[] = ['icon' => 'layout-dashboard', 'label' => 'Tableau de bord', 'path' => '/rappel/public/pro/dashboard.php'];
+    $menuItems[] = ['icon' => 'credit-card', 'label' => 'Plans & Tarifs', 'path' => '/rappel/public/pro/pricing.php'];
+    $menuItems[] = ['icon' => 'settings', 'label' => 'Parametres', 'path' => '/rappel/public/pro/settings.php'];
+}
+
+if ($isAdminUser) {
     $menuItems[] = ['icon' => 'credit-card', 'label' => 'Forfaits', 'path' => '/rappel/public/admin/dashboard.php?view=plans', 'admin_view' => 'plans', 'is_admin' => true];
     $menuItems[] = ['icon' => 'briefcase-business', 'label' => 'Prestataires', 'path' => '/rappel/public/admin/dashboard.php?view=providers', 'admin_view' => 'providers', 'is_admin' => true];
     $menuItems[] = ['icon' => 'inbox', 'label' => 'Leads', 'path' => '/rappel/public/admin/dashboard.php?view=leads', 'admin_view' => 'leads', 'is_admin' => true];
     $menuItems[] = ['icon' => 'shuffle', 'label' => 'Dispatch', 'path' => '/rappel/public/admin/dashboard.php?view=dispatch', 'admin_view' => 'dispatch', 'is_admin' => true];
     $menuItems[] = ['icon' => 'bar-chart-3', 'label' => 'Analytics', 'path' => '/rappel/public/admin/dashboard.php?view=analytics', 'admin_view' => 'analytics', 'is_admin' => true];
+    $menuItems[] = ['icon' => 'settings', 'label' => 'Parametres', 'path' => '/rappel/public/admin/dashboard.php?view=settings', 'admin_view' => 'settings', 'is_admin' => true];
 }
 ?>
 

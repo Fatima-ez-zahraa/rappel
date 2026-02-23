@@ -63,7 +63,7 @@ tailwind.config = {
 </script>
 
 <!-- Custom CSS -->
-<link rel="stylesheet" href="/rappel/public/assets/css/app.css">
+<link rel="stylesheet" href="/rappel/public/assets/css/app.css?v=1.2">
 
 <!-- Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>

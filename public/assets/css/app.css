@@ -104,6 +104,28 @@ body {
 }
 
 /* ---- Animations ---- */
+/* Animations */
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out infinite;
+  animation-iteration-count: 2;
+}
+
 @keyframes float {
 
   0%,
@@ -746,32 +768,32 @@ body.admin-theme-dark #sidebar nav a.bg-brand-50 .absolute {
 
 /* Admin nav links — accent green (to distinguish from pro blue) */
 body.admin-theme-dark #sidebar nav a.admin-nav-item {
-  color: #86efac !important;
+  color: #cbd5e1 !important;
 }
 
 body.admin-theme-dark #sidebar nav a.admin-nav-item:hover {
-  background: rgba(124, 203, 99, 0.10) !important;
-  color: #bbf7d0 !important;
+  background: rgba(51, 65, 85, 0.45) !important;
+  color: #f8fafc !important;
 }
 
 body.admin-theme-dark #sidebar nav a.admin-nav-item.bg-brand-50 {
-  background: rgba(124, 203, 99, 0.15) !important;
-  color: #bbf7d0 !important;
+  background: rgba(71, 85, 105, 0.4) !important;
+  color: #f8fafc !important;
 }
 
 body.admin-theme-dark #sidebar nav a.admin-nav-item.bg-brand-50 .absolute {
-  background: #70b759 !important;
+  background: #64748b !important;
 }
 
 body.admin-theme-dark #sidebar nav a.admin-nav-item i {
-  color: #86efac !important;
+  color: #94a3b8 !important;
 }
 
 /* Admin section separator */
 body.admin-theme-dark .admin-nav-separator {
-  color: #7CCB63 !important;
-  border-color: rgba(124, 203, 99, 0.2) !important;
-  background: rgba(124, 203, 99, 0.07) !important;
+  color: #94a3b8 !important;
+  border-color: rgba(71, 85, 105, 0.38) !important;
+  background: rgba(15, 23, 42, 0.55) !important;
 }
 
 /* Sidebar user profile */
@@ -799,252 +821,367 @@ body.admin-theme-dark #sidebar-toggle:hover {
   color: #7CCB63 !important;
 }
 
-/* --- Cards & Glass --- */
+/* ============================================================
+   ADMIN THEME - DARK (SLATE & CARBON)
+   ============================================================ */
+body.admin-theme-dark {
+  background-color: #09090b !important;
+  /* Deep Zinc/Carbon */
+  background-image:
+    radial-gradient(at 0% 0%, rgba(124, 203, 99, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(24, 24, 27, 0.5) 0px, transparent 50%) !important;
+  color: #fafafa !important;
+}
+
+/* Sidebar Toggle Dark */
+body.admin-theme-dark #sidebar-toggle {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #71717a !important;
+}
+
+body.admin-theme-dark #sidebar-toggle:hover {
+  color: #7CCB63 !important;
+  border-color: #3f3f46 !important;
+}
+
+/* --- Cards & Glass Dark --- */
 body.admin-theme-dark .card {
-  background: rgba(10, 18, 48, 0.82) !important;
-  border: 1px solid rgba(35, 75, 174, 0.22) !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(35, 75, 174, 0.08) inset;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(24, 24, 27, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.5),
+    0 8px 10px -6px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+}
+
+body.admin-theme-dark .card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(124, 203, 99, 0.15), transparent);
 }
 
 body.admin-theme-dark .glass-card,
 body.admin-theme-dark .glass-card-sm {
-  background: rgba(10, 18, 48, 0.70) !important;
-  border: 1px solid rgba(35, 75, 174, 0.2) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  background: rgba(24, 24, 27, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
 
-/* --- Typography --- */
+/* --- Typography Dark --- */
 body.admin-theme-dark .text-navy-950,
 body.admin-theme-dark .text-navy-900,
 body.admin-theme-dark .text-navy-800 {
-  color: #f1f5f9 !important;
+  color: #fafafa !important;
 }
 
 body.admin-theme-dark .text-navy-700,
 body.admin-theme-dark .text-navy-600 {
-  color: #cbd5e1 !important;
+  color: #d1d1d6 !important;
 }
 
 body.admin-theme-dark .text-navy-500 {
-  color: #becbe2 !important;
+  color: #a1a1aa !important;
 }
 
-body.admin-theme-dark .text-navy-400,
-body.admin-theme-dark .text-neutral-400 {
-  color: #a6b7d3 !important;
-}
-
-/* brand-600 text (labels) — lighten for dark bg */
 body.admin-theme-dark .text-brand-600 {
-  color: #6581c7 !important;
+  color: #7CCB63 !important;
+  /* Switch blue labels to brand green */
 }
 
-/* --- Backgrounds --- */
+/* --- Backgrounds Dark --- */
 body.admin-theme-dark .bg-white,
 body.admin-theme-dark .bg-white\/70,
-body.admin-theme-dark .bg-white\/80,
-body.admin-theme-dark .bg-white\/40 {
-  background-color: rgba(10, 18, 48, 0.82) !important;
+body.admin-theme-dark .bg-white\/80 {
+  background-color: rgba(24, 24, 27, 0.9) !important;
 }
 
 body.admin-theme-dark .bg-navy-50,
-body.admin-theme-dark .bg-brand-50,
-body.admin-theme-dark .bg-neutral-50 {
-  background-color: rgba(20, 35, 80, 0.65) !important;
+body.admin-theme-dark .bg-brand-50 {
+  background-color: rgba(39, 39, 42, 0.6) !important;
 }
 
-body.admin-theme-dark .bg-accent-50 {
-  background-color: rgba(55, 89, 43, 0.35) !important;
-}
-
-body.admin-theme-dark .bg-brand-900 {
-  background-color: rgba(14, 22, 72, 0.95) !important;
-}
-
-/* --- Borders --- */
-body.admin-theme-dark .border-navy-100,
-body.admin-theme-dark .border-navy-50,
-body.admin-theme-dark .border-white\/50,
-body.admin-theme-dark .border-white\/60 {
-  border-color: rgba(35, 75, 174, 0.22) !important;
-}
-
-/* --- Inline rounded panels --- */
-body.admin-theme-dark .rounded-xl.border {
-  background: rgba(8, 14, 40, 0.6) !important;
-  border-color: rgba(35, 75, 174, 0.22) !important;
-}
-
-/* --- Tables --- */
-body.admin-theme-dark table thead tr {
-  border-color: rgba(35, 75, 174, 0.3) !important;
-}
-
+/* --- Tables Dark --- */
 body.admin-theme-dark table thead th {
   color: #7CCB63 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  font-size: 0.65rem !important;
+  border-bottom: 1px solid #27272a !important;
 }
 
 body.admin-theme-dark table tbody tr {
-  border-color: rgba(35, 75, 174, 0.15) !important;
+  border-color: #18181b !important;
+  transition: background 0.2s ease !important;
 }
 
 body.admin-theme-dark table tbody tr:hover td {
-  background: rgba(35, 75, 174, 0.07) !important;
+  background: rgba(124, 203, 99, 0.02) !important;
 }
 
 body.admin-theme-dark table td {
-  color: #dbe6f7 !important;
+  color: #e4e4e7 !important;
 }
 
-body.admin-theme-dark table td strong,
-body.admin-theme-dark table td p.font-bold {
-  color: #f1f5f9 !important;
-}
-
-/* --- Forms --- */
+/* --- Forms Dark --- */
 body.admin-theme-dark .form-input,
-body.admin-theme-dark .form-select,
 body.admin-theme-dark .form-textarea {
-  background: rgba(6, 12, 35, 0.75) !important;
-  border-color: rgba(35, 75, 174, 0.35) !important;
-  color: #f1f5f9 !important;
+  background: #09090b !important;
+  border-color: #27272a !important;
+  color: #fafafa !important;
 }
 
-body.admin-theme-dark .form-input::placeholder,
-body.admin-theme-dark .form-textarea::placeholder {
-  color: #475569 !important;
-}
-
-body.admin-theme-dark .form-input:focus,
-body.admin-theme-dark .form-select:focus,
-body.admin-theme-dark .form-textarea:focus {
+body.admin-theme-dark .form-input:focus {
   border-color: #7CCB63 !important;
-  box-shadow: 0 0 0 3px rgba(124, 203, 99, 0.18) !important;
+  box-shadow: 0 0 0 4px rgba(124, 203, 99, 0.1) !important;
 }
 
-body.admin-theme-dark .form-label {
-  color: #94a3b8 !important;
-}
-
-/* --- Buttons (keep brand colors, adapt for dark bg) --- */
-body.admin-theme-dark .btn-primary {
-  background: linear-gradient(135deg, #234bae, #0E1648) !important;
-  box-shadow: 0 4px 20px rgba(35, 75, 174, 0.45) !important;
-  color: #fff !important;
-  border: 1px solid rgba(101, 129, 199, 0.3);
-}
-
-body.admin-theme-dark .btn-primary:hover {
-  background: linear-gradient(135deg, #2d5cc4, #1e4093) !important;
-  box-shadow: 0 6px 28px rgba(35, 75, 174, 0.6) !important;
-  transform: translateY(-1px);
-}
-
+/* --- Buttons Dark --- */
 body.admin-theme-dark .btn-accent {
-  background: linear-gradient(135deg, #7CCB63, #568c44) !important;
-  box-shadow: 0 4px 20px rgba(124, 203, 99, 0.35) !important;
-  color: #0a1036 !important;
-  font-weight: 800 !important;
+  background: linear-gradient(135deg, #7CCB63, #3f6212) !important;
+  color: #fafafa !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 body.admin-theme-dark .btn-accent:hover {
-  background: linear-gradient(135deg, #80d961, #70b759) !important;
-  box-shadow: 0 6px 28px rgba(124, 203, 99, 0.5) !important;
-  transform: translateY(-1px);
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5) !important;
+  filter: brightness(1.1);
 }
 
-body.admin-theme-dark .btn-outline {
-  color: #6581c7 !important;
-  border-color: rgba(35, 75, 174, 0.4) !important;
-  background: rgba(35, 75, 174, 0.08) !important;
-}
-
-body.admin-theme-dark .btn-outline:hover {
-  background: rgba(35, 75, 174, 0.18) !important;
-  border-color: rgba(101, 129, 199, 0.6) !important;
-  color: #a7b7df !important;
-}
-
-body.admin-theme-dark .btn-ghost {
-  color: #94a3b8 !important;
-}
-
-body.admin-theme-dark .btn-ghost:hover {
-  background: rgba(35, 75, 174, 0.12) !important;
-  color: #e2e8f0 !important;
-}
-
-/* Logout */
-body.admin-theme-dark #sidebar .bg-red-50 {
-  background: rgba(127, 29, 29, 0.2) !important;
-  border-color: rgba(220, 38, 38, 0.2) !important;
-  color: #fca5a5 !important;
-}
-
-body.admin-theme-dark #sidebar .bg-red-50:hover {
-  background: rgba(127, 29, 29, 0.35) !important;
-}
-
-/* --- Skeleton pulse in dark mode --- */
-body.admin-theme-dark .h-3.bg-navy-100,
-body.admin-theme-dark .h-7.bg-navy-100 {
-  background-color: rgba(20, 42, 98, 0.7) !important;
-}
-
-/* --- Mobile header --- */
-body.admin-theme-dark #mobile-header {
-  background: rgba(6, 10, 25, 0.94) !important;
-  border-color: rgba(35, 75, 174, 0.25) !important;
-  color: #e2e8f0 !important;
-}
-
-/* --- Admin banner --- */
+/* --- Admin banner Dark --- */
 .admin-banner {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 1rem;
-  background: linear-gradient(90deg, rgba(35, 75, 174, 0.3), rgba(124, 203, 99, 0.12));
-  border: 1px solid rgba(101, 129, 199, 0.35);
-  border-radius: 0.75rem;
-  color: #a9bcdf;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: 1.5rem;
+  background: rgba(39, 39, 42, 0.5) !important;
+  border: 1px solid #27272a !important;
+  color: #d1d1d6 !important;
+  backdrop-filter: blur(10px) !important;
 }
 
-.admin-banner i {
-  color: #7CCB63;
-}
-
-/* --- Stat cards icon container --- */
+/* --- Stat cards icon container Dark --- */
 body.admin-theme-dark .w-9.rounded-xl {
-  background: rgba(35, 75, 174, 0.18) !important;
-  color: #6581c7 !important;
+  background: rgba(124, 203, 99, 0.1) !important;
+  color: #7CCB63 !important;
+  border: 1px solid rgba(124, 203, 99, 0.2) !important;
 }
 
-/* --- Scrollbar dark --- */
-body.admin-theme-dark ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
+/* --- Scrollbar Dark --- */
 body.admin-theme-dark ::-webkit-scrollbar-track {
-  background: rgba(6, 10, 25, 0.5);
+  background: #09090b;
 }
 
 body.admin-theme-dark ::-webkit-scrollbar-thumb {
-  background: rgba(35, 75, 174, 0.4);
-  border-radius: 3px;
+  background: #27272a;
+  border-radius: 10px;
 }
 
 body.admin-theme-dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 203, 99, 0.45);
+  background: #3f3f46;
 }
 
+/* ---- Sidebar Dark Refinement ---- */
+body.admin-theme-dark #sidebar {
+  background: #09090b !important;
+  border-right: 1px solid #18181b !important;
+}
+
+body.admin-theme-dark #sidebar nav a.admin-nav-item,
+body.admin-theme-dark #sidebar nav a.admin-nav-item .sidebar-label {
+  color: #a1a1aa !important;
+}
+
+body.admin-theme-dark #sidebar nav a.admin-nav-item i {
+  color: #71717a !important;
+}
+
+body.admin-theme-dark #sidebar nav a.admin-nav-item:hover,
+body.admin-theme-dark #sidebar nav a.admin-nav-item:hover .sidebar-label {
+  background: #18181b !important;
+  color: #fafafa !important;
+}
+
+body.admin-theme-dark #sidebar nav a.admin-nav-item:hover i {
+  color: #7CCB63 !important;
+}
+
+body.admin-theme-dark #sidebar nav a.admin-nav-item.bg-brand-50,
+body.admin-theme-dark #sidebar nav a.admin-nav-item.bg-brand-50 .sidebar-label {
+  background: #18181b !important;
+  color: #7CCB63 !important;
+  border-right: 3px solid #7CCB63 !important;
+}
+
+body.admin-theme-dark #sidebar nav a.admin-nav-item.bg-brand-50 i {
+  color: #7CCB63 !important;
+}
+
+body.admin-theme-dark .admin-nav-separator,
+body.admin-theme-dark .admin-nav-separator .sidebar-label,
+body.admin-theme-dark .admin-nav-separator i {
+  color: #52525b !important;
+}
+
+body.admin-theme-dark .admin-nav-separator {
+  background: transparent !important;
+  border-bottom: 1px solid #18181b !important;
+  border-radius: 0 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+body.admin-theme-dark #sidebar .bg-gradient-to-br {
+  background: #09090b !important;
+  border: 1px solid #18181b !important;
+}
+
+/* ============================================================
+   ADMIN THEME - LIGHT (LOGO GREEN)
+   ============================================================ */
+body.admin-theme-light {
+  background-color: #D3D3D3 !important;
+  /* Public Page Gray */
+  background-image:
+    radial-gradient(at 0% 0%, rgba(124, 203, 99, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(255, 255, 255, 0.3) 0px, transparent 50%) !important;
+  color: var(--navy-900) !important;
+}
+
+body.admin-theme-light .card {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(124, 203, 99, 0.2) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(124, 203, 99, 0.03) !important;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+body.admin-theme-light .card::after {
+  background: linear-gradient(90deg, transparent, rgba(124, 203, 99, 0.3), transparent);
+}
+
+body.admin-theme-light .text-white,
+body.admin-theme-light h1,
+body.admin-theme-light .text-navy-950,
+body.admin-theme-light .text-navy-900 {
+  color: #0f2912 !important;
+}
+
+body.admin-theme-light .text-navy-400,
+body.admin-theme-light .text-navy-500 {
+  color: #568c44 !important;
+  /* Darker green for sub-labels in light mode */
+}
+
+/* Sidebar Light Theme - Gray + Green Accents */
+body.admin-theme-light #sidebar {
+  background: #D3D3D3 !important;
+  /* Match Body Gray */
+  border-right: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+body.admin-theme-light #sidebar nav a.admin-nav-item {
+  color: #1a2e1d !important;
+}
+
+body.admin-theme-light #sidebar nav a.admin-nav-item:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: #0f2912 !important;
+}
+
+body.admin-theme-light #sidebar nav a.admin-nav-item.bg-brand-50 {
+  background: #ffffff !important;
+  /* Active item stands out with white */
+  border-right: 4px solid #7CCB63 !important;
+  color: #166534 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.admin-theme-light #sidebar .bg-gradient-to-br {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+body.admin-theme-light .admin-nav-separator {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: #166534 !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Forms Light Mode Green */
+body.admin-theme-light .form-input,
+body.admin-theme-light .form-textarea {
+  background: #ffffff !important;
+  border-color: #dcfce7 !important;
+  color: #0f2912 !important;
+}
+
+body.admin-theme-light .form-input:focus {
+  border-color: #7CCB63 !important;
+  box-shadow: 0 0 0 4px rgba(124, 203, 99, 0.1) !important;
+}
+
+/* Tables Light Mode Green */
+body.admin-theme-light table thead th {
+  color: #166534 !important;
+  border-bottom: 2px solid #f0fdf4 !important;
+}
+
+body.admin-theme-light table tbody tr {
+  border-color: #f7fee7 !important;
+}
+
+body.admin-theme-light table tbody tr:hover td {
+  background: rgba(240, 253, 244, 0.8) !important;
+}
+
+body.admin-theme-light table td {
+  color: #1e3a1f !important;
+}
+
+/* Buttons Light Mode - Logo Green Accent */
+body.admin-theme-light .btn-accent {
+  background: linear-gradient(135deg, #7CCB63, #568c44) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(124, 203, 99, 0.2) !important;
+}
+
+body.admin-theme-light .btn-accent:hover {
+  background: linear-gradient(135deg, #8ad172, #7CCB63) !important;
+  box-shadow: 0 6px 20px rgba(124, 203, 99, 0.3) !important;
+}
+
+/* Banner Light Mode */
+body.admin-theme-light .admin-banner {
+  background: rgba(240, 253, 244, 0.6) !important;
+  border-color: rgba(124, 203, 99, 0.2) !important;
+  color: #166534 !important;
+}
+
+/* Stat cards icon container green light mode */
+body.admin-theme-light .w-9.rounded-xl {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+  border: 1px solid #dcfce7 !important;
+}
+
+/* Navigation tabs in green Mode */
+body.admin-theme-light .flex.flex-wrap.items-center.gap-2 a {
+  background: #ffffff !important;
+  border-color: #f0fdf4 !important;
+  color: #166534 !important;
+}
+
+body.admin-theme-light .flex.flex-wrap.items-center.gap-2 a.bg-accent-500\/20 {
+  background: #dcfce7 !important;
+  border-color: #7CCB63 !important;
+  color: #15803d !important;
+}

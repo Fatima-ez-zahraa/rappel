@@ -213,9 +213,23 @@ $pageTitle = 'Créer un compte Expert';
                     <label class="form-label">Description de votre activité</label>
                     <textarea id="description" class="form-textarea rounded-2xl" placeholder="Décrivez votre activité et vos spécialités..."></textarea>
                 </div>
-                <div class="p-4 bg-navy-50 rounded-2xl text-sm text-navy-600 font-medium flex items-start gap-3">
-                    <i data-lucide="shield-check" class="text-accent-600 flex-shrink-0 mt-0.5" style="width:18px;height:18px;"></i>
-                    <span>En créant votre compte, vous acceptez nos <a href="#" class="text-accent-600 font-bold">Conditions Générales</a> et notre <a href="#" class="text-accent-600 font-bold">Politique de Confidentialité</a>.</span>
+                <div class="flex items-start gap-3 px-2 py-1">
+                    <div class="flex items-center h-5">
+                        <input id="consent-checkbox" type="checkbox" class="w-5 h-5 rounded border-navy-200 text-accent-600 focus:ring-accent-500 cursor-pointer">
+                    </div>
+                    <label for="consent-checkbox" class="text-sm font-bold text-navy-900 cursor-pointer select-none">
+                        J’accepte d’être contacté conformément au texte ci-dessous. <span class="text-red-500">*</span>
+                    </label>
+                </div>
+
+                <div class="p-4 bg-navy-50 rounded-2xl text-xs text-navy-600 font-medium space-y-3">
+                    <div class="flex items-start gap-3">
+                        <i data-lucide="shield-check" class="text-accent-600 flex-shrink-0 mt-0.5" style="width:18px;height:18px;"></i>
+                        <div class="space-y-2">
+                            <p>En créant votre compte, vous acceptez nos <a href="/rappel/public/legal.php#cgu" class="text-accent-600 font-bold hover:underline">Conditions Générales</a> et notre <a href="/rappel/public/legal.php#confidentialite" class="text-accent-600 font-bold hover:underline">Politique de Confidentialité</a>.</p>
+                            <p class="text-[10px] italic">L’utilisation du Service implique l’acceptation des CGU. En validant, vous acceptez notre Politique de confidentialité.</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex gap-4">
                     <button onclick="goToStep(2)" class="btn btn-outline btn-lg flex-1 rounded-2xl">Retour</button>
@@ -237,7 +251,7 @@ $pageTitle = 'Créer un compte Expert';
     </div>
 </div>
 
-<script src="/rappel/public/assets/js/app.js"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
 <script>
 let currentStep = 1;
 
@@ -368,6 +382,20 @@ function setStatus(msg, type) {
 
 async function handleSignup() {
     if (!validateStep(3)) return;
+
+    const checkbox = document.getElementById('consent-checkbox');
+    if (checkbox && !checkbox.checked) {
+        const errEl = document.getElementById('signup-error');
+        const errText = document.getElementById('signup-error-text');
+        errText.textContent = 'Veuillez accepter d\'être contacté pour valider votre inscription.';
+        errEl.classList.remove('hidden');
+        checkbox.closest('div').parentElement.classList.add('animate-shake', 'text-red-500');
+        setTimeout(() => {
+            checkbox.closest('div').parentElement.classList.remove('animate-shake', 'text-red-500');
+        }, 1000);
+        return;
+    }
+
     const sector = document.getElementById('sector').value;
     const zone = document.getElementById('zone').value;
     if (!sector || !zone) {

@@ -206,7 +206,7 @@ $pageTitle = 'Espace Expert';
     </footer>
 </div>
 
-<script src="/rappel/public/assets/js/app.js"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });</script>
 </body>
 </html>
