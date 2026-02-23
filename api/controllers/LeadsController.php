@@ -116,7 +116,7 @@ class LeadsController
                 if ($this->lead->email) {
                     try {
                         $mailer->sendConfirmation($this->lead->email, $this->lead->name, [
-                            'need' => $this->lead->need,
+                            'need' => !empty($this->lead->need) ? $this->lead->need : $this->lead->sector,
                             'time_slot' => $this->lead->time_slot,
                             'phone' => $this->lead->phone
                         ]);

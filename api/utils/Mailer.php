@@ -80,16 +80,67 @@ class Mailer
             $mail->CharSet = 'UTF-8';
             $mail->Subject = 'Confirmation de votre demande de rappel';
             
-            $body = "<h1>Bonjour $to_name,</h1>";
-            $body .= "<p>Nous avons bien reçu votre demande de rappel.</p>";
-            $body .= "<p><strong>Détails :</strong></p>";
-            $body .= "<ul>";
-            $body .= "<li>Besoin : " . htmlspecialchars($lead_details['need'] ?? '') . "</li>";
-            $body .= "<li>Créneau souhaité : " . htmlspecialchars($lead_details['time_slot'] ?? 'Non spécifié') . "</li>";
-            $body .= "<li>Téléphone : " . htmlspecialchars($lead_details['phone'] ?? '') . "</li>";
-            $body .= "</ul>";
-            $body .= "<p>Un de nos conseillers vous contactera bientôt.</p>";
-            $body .= "<p>Cordialement,<br>L'équipe Rappelez-moi.co</p>";
+            $need = htmlspecialchars($lead_details['need'] ?? 'Général');
+            $time_slot = htmlspecialchars($lead_details['time_slot'] ?? 'Non spécifié');
+            $phone = htmlspecialchars($lead_details['phone'] ?? '');
+
+            $body = "
+            <div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 20px;'>
+                <div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);'>
+                    <!-- Header -->
+                    <div style='background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); padding: 40px; text-align: center;'>
+                        <h2 style='color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;'>Rappelez-moi.co</h2>
+                        <p style='color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 16px;'>Confirmation de votre demande</p>
+                    </div>
+
+                    <!-- Content -->
+                    <div style='padding: 40px;'>
+                        <h1 style='color: #0f172a; font-size: 28px; font-weight: 700; margin: 0 0 16px 0;'>Bonjour $to_name,</h1>
+                        <p style='color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0;'>
+                            Nous avons bien reçu votre demande de rappel. Un de nos experts partenaires vous contactera prochainement selon vos préférences.
+                        </p>
+
+                        <!-- Details Box -->
+                        <div style='background-color: #f1f5f9; border-radius: 16px; padding: 24px; margin-bottom: 32px;'>
+                            <h3 style='color: #0f172a; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 16px 0;'>Détails de la demande</h3>
+                            
+                            <table style='width: 100%; border-collapse: collapse;'>
+                                <tr>
+                                    <td style='padding: 8px 0; color: #64748b; font-size: 14px;'>Besoin</td>
+                                    <td style='padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600; text-align: right;'>$need</td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 8px 0; color: #64748b; font-size: 14px;'>Créneau souhaité</td>
+                                    <td style='padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600; text-align: right;'>$time_slot</td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 8px 0; color: #64748b; font-size: 14px;'>Téléphone</td>
+                                    <td style='padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600; text-align: right;'>$phone</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div style='text-align: center;'>
+                            <p style='color: #94a3b8; font-size: 13px; font-style: italic; margin-bottom: 0;'>
+                                Préparez vos questions, notre expert sera là pour vous accompagner.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style='padding: 32px 40px; border-top: 1px solid #f1f5f9; text-align: center;'>
+                        <p style='color: #475569; font-size: 14px; font-weight: 600; margin: 0;'>Cordialement,</p>
+                        <p style='color: #10b981; font-size: 14px; font-weight: 700; margin: 4px 0 0 0;'>L'équipe Rappelez-moi.co</p>
+                        
+                        <div style='margin-top: 24px;'>
+                            <p style='color: #94a3b8; font-size: 11px; margin: 0;'>
+                                Cet e-mail est une notification automatique, merci de ne pas y répondre directement.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>";
+
 
             $mail->Body    = $body;
             $mail->AltBody = strip_tags($body);
