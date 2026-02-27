@@ -3,6 +3,8 @@
 
 require_once 'config/db.php';
 require_once 'models/Lead.php';
+require_once 'models/LeadInteraction.php';
+require_once 'models/LeadAssignment.php';
 require_once 'utils/JwtUtils.php';
 require_once 'utils/Mailer.php';
 
@@ -50,9 +52,22 @@ class LeadsController
     {
         $auth = $this->authenticate();
         
-        // If provider, only show their leads. If admin, show all?
-        // Let's assume this controller is for the provider dashboard.
-        $stmt = $this->lead->readByProvider($auth['id']);
+        if ($auth['role'] === 'client') {
+            $stmt = $this->lead->readByClient($auth['id']);
+        } else {
+            $filter = $_GET['filter'] ?? 'all';
+            if ($filter === 'recommended') {
+                require_once 'models/User.php';
+                $userModel = new User($this->db);
+                $userModel->id = $auth['id'];
+                $userModel->readOne();
+                $stmt = $this->lead->readRecommended($userModel->sectors, $auth['id']);
+            } else {
+                // Return leads for providers (Available or Claimed by them)
+                $stmt = $this->lead->read($auth['id']);
+            }
+        }
+        
         $num = $stmt->rowCount();
 
         if ($num > 0) {
@@ -69,19 +84,17 @@ class LeadsController
     public function create($returnResult = false)
     {
         $data = json_decode(file_get_contents("php://input"));
-        error_log("Lead Create Data: " . print_r($data, true));
         
-        // For internal calls (manual creation), data might be passed directly
         if (!$data && property_exists($this, 'tempData')) {
             $data = $this->tempData;
         }
 
         // Handle first_name + last_name -> name
-        if (empty($data->name) && (!empty($data->first_name) || !empty($data->last_name))) {
+        if ($data && empty($data->name) && (!empty($data->first_name) || !empty($data->last_name))) {
             $data->name = trim(($data->first_name ?? '') . ' ' . ($data->last_name ?? ''));
         }
 
-        if (!empty($data->name) && !empty($data->phone)) {
+        if ($data && !empty($data->name) && !empty($data->phone)) {
             // UUID v4
             $this->lead->id = sprintf(
                 '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
@@ -100,10 +113,23 @@ class LeadsController
             $this->lead->email = $data->email ?? null;
             $this->lead->sector = $data->service_type ?? ($data->sector ?? 'Général'); // Frontend sends service_type
             $this->lead->need = $data->need ?? '';
-            $this->lead->time_slot = $data->time_slot ?? 'Non spécifié';
+            $this->lead->time_slot = $data->time_slot ?? '';
             $this->lead->budget = $data->budget ?? 0;
             $this->lead->status = 'pending';
-            $this->lead->address = $data->address ?? ($data->zip_code ?? ''); // Use zip if address empty
+            $this->lead->address = $data->address ?? '';
+            $this->lead->zip_code = $data->zip_code ?? '';
+            $this->lead->city = $data->city ?? '';
+            $this->lead->user_id = $data->user_id ?? null;
+
+            // If user is logged in as client, auto-assign user_id
+            try {
+                $auth = $this->authenticate();
+                if ($auth && $auth['role'] === 'client') {
+                    $this->lead->user_id = $auth['id'];
+                }
+            } catch (Exception $e) {
+                // Not authenticated, that's fine for public submissions
+            }
 
             if ($this->lead->create()) {
                 if ($returnResult) return $this->lead->id;
@@ -128,6 +154,25 @@ class LeadsController
                     }
                 }
 
+                // Notify Providers in the same sector
+                if (!empty($this->lead->sector)) {
+                    require_once 'models/User.php';
+                    $userModel = new User($this->db);
+                    $providers = $userModel->findBySector($this->lead->sector);
+                    
+                    foreach ($providers as $prov) {
+                        try {
+                            $mailer->sendLeadNotificationToProvider($prov['email'], ($prov['first_name'] . ' ' . $prov['last_name']), [
+                                'sector' => $this->lead->sector,
+                                'city' => $this->lead->city,
+                                'budget' => $this->lead->budget
+                            ]);
+                        } catch (Exception $e) {
+                            error_log("Provider notification failed for {$prov['email']}: " . $e->getMessage());
+                        }
+                    }
+                }
+
                 echo json_encode(["message" => "Lead créé.", "id" => $this->lead->id]);
             } else {
                 if ($returnResult) return false;
@@ -137,13 +182,22 @@ class LeadsController
         } else {
             if ($returnResult) return false;
             http_response_code(400);
-            echo json_encode(["error" => "Données incomplètes (nom et téléphone requis). Data received: " . print_r($data, true)]);
+            echo json_encode(["error" => "Données incomplètes (nom et téléphone requis)."]);
         }
     }
 
     public function get($id)
     {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE id = ? LIMIT 0,1";
+        $query = "SELECT l.*, 
+                         cp.first_name AS client_first_name, 
+                         cp.last_name AS client_last_name,
+                         cp.phone AS client_profile_phone,
+                         cp.address AS client_profile_address,
+                         cp.city AS client_profile_city,
+                         cp.zip AS client_profile_zip
+                  FROM " . $this->table_name . " l
+                  LEFT JOIN user_profiles cp ON l.user_id = cp.id
+                  WHERE l.id = ? LIMIT 0,1";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $id);
         $stmt->execute();
@@ -216,6 +270,138 @@ class LeadsController
         } else {
             http_response_code(503);
             echo json_encode(["error" => "Échec de la mise à jour."]);
+        }
+    }
+
+    public function getInteractions($lead_id)
+    {
+        $auth = $this->authenticate();
+        $interaction = new LeadInteraction($this->db);
+        $stmt = $interaction->readByLead($lead_id);
+        
+        $interactions = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $interactions[] = $row;
+        }
+        echo json_encode($interactions);
+    }
+
+    public function addInteraction($lead_id)
+    {
+        $auth = $this->authenticate();
+        $data = json_decode(file_get_contents("php://input"));
+
+        if (empty($data->comment)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Commentaire requis."]);
+            return;
+        }
+
+        $interaction = new LeadInteraction($this->db);
+        $interaction->id = sprintf(
+            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+        $interaction->lead_id = $lead_id;
+        $interaction->provider_id = $auth['id'];
+        $interaction->comment = $data->comment;
+
+        if ($interaction->create()) {
+            http_response_code(201);
+            echo json_encode(["message" => "Commentaire ajouté.", "id" => $interaction->id]);
+        } else {
+            http_response_code(503);
+            echo json_encode(["error" => "Échec de l'ajout du commentaire."]);
+        }
+    }
+
+    public function deleteInteraction($id)
+    {
+        $auth = $this->authenticate();
+        $interaction = new LeadInteraction($this->db);
+        
+        // Ownership check
+        $query = "SELECT provider_id FROM lead_interactions WHERE id = ?";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(["error" => "Interaction non trouvée."]);
+            return;
+        }
+        
+        if ((string)$row['provider_id'] !== (string)$auth['id']) {
+            http_response_code(403);
+            echo json_encode(["error" => "Vous ne pouvez supprimer que vos propres commentaires."]);
+            return;
+        }
+        
+        $interaction->id = $id;
+        if ($interaction->delete()) {
+            echo json_encode(["message" => "Commentaire supprimé."]);
+        } else {
+            http_response_code(503);
+            echo json_encode(["error" => "Échec de la suppression."]);
+        }
+    }
+
+    public function claim($lead_id)
+    {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'provider') {
+            http_response_code(403);
+            echo json_encode(["error" => "Seuls les prestataires peuvent réclamer des leads."]);
+            return;
+        }
+
+        // Check credits
+        require_once 'models/User.php';
+        $userModel = new User($this->db);
+        $userModel->id = $auth['id'];
+        
+        if (!$userModel->hasEnoughCredits()) {
+            http_response_code(403);
+            echo json_encode(["error" => "Vous n'avez plus de crédits lead. Veuillez upgrader votre offre dans la section Facturation."]);
+            return;
+        }
+
+        // Check if already assigned
+        $checkStmt = $this->db->prepare("SELECT id FROM lead_assignments WHERE lead_id = ?");
+        $checkStmt->execute([$lead_id]);
+        if ($checkStmt->fetch()) {
+            http_response_code(400);
+            echo json_encode(["error" => "Ce lead est déjà assigné."]);
+            return;
+        }
+
+        try {
+            $this->db->beginTransaction();
+
+            // 1. Create assignment
+            if ($this->lead->createAssignment($lead_id, $auth['id'])) {
+                // 2. Deduct credit
+                if (!$userModel->deductCredit()) {
+                    throw new Exception("Échec de la déduction de crédit.");
+                }
+
+                // 3. Update lead status to assigned
+                $updateStmt = $this->db->prepare("UPDATE leads SET status = 'assigned' WHERE id = ?");
+                $updateStmt->execute([$lead_id]);
+
+                $this->db->commit();
+                http_response_code(200);
+                echo json_encode(["message" => "Lead réclamé avec succès. 1 crédit a été déduit."]);
+            } else {
+                throw new Exception("Échec de l'assignation du lead.");
+            }
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            http_response_code(500);
+            echo json_encode(["error" => $e->getMessage()]);
         }
     }
 }

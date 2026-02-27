@@ -1,7 +1,7 @@
 <?php
 
 $pageTitle = $pageTitle ?? 'Rappelez-moi';
-$apiUrl = 'http://localhost/rappel/api';
+$apiUrl = '/rappel/api';
 ?>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,7 +63,7 @@ tailwind.config = {
 </script>
 
 <!-- Custom CSS -->
-<link rel="stylesheet" href="/rappel/public/assets/css/app.css?v=1.2">
+<link rel="stylesheet" href="/rappel/public/assets/css/app.css?v=4.4">
 
 <!-- Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>

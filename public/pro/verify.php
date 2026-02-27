@@ -104,7 +104,7 @@ async function handleVerify() {
 
         // Update session with verified user
         const token = data.session?.access_token || Auth.getToken();
-        const user = { ...(Auth.getUser() || {}), is_verified: true };
+        const user = data.user || { ...(Auth.getUser() || {}), is_verified: true };
         await fetch('/rappel/public/api-session.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

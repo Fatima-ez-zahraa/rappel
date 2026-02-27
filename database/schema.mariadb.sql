@@ -1,4 +1,4 @@
--- Database Schema for Rappelez-moi (MariaDB Version)
+-- Database Schema (MariaDB Version)
 CREATE DATABASE IF NOT EXISTS rappel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE rappel;
 
@@ -84,6 +84,19 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     features JSON,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
+-- 6. Table: invoices
+CREATE TABLE IF NOT EXISTS invoices (
+    id CHAR(36) PRIMARY KEY,
+    provider_id CHAR(36) NOT NULL,
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'EUR',
+    status VARCHAR(20) DEFAULT 'paid', -- 'paid' | 'pending' | 'failed'
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (provider_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 
 -- Initial Data Seeding (Plans)
 INSERT INTO subscription_plans (id, name, stripe_price_id, price, features)

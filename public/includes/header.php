@@ -28,23 +28,39 @@
                data-target="demande">
                 Chercher un prestataire
             </a>
-            <a href="/rappel/public/#legal"
-               class="text-sm font-semibold text-navy-600 hover:text-accent-600 transition-colors scroll-link"
-               data-target="legal">
+            <a href="/rappel/public/legal.php#cookies"
+               class="text-sm font-semibold text-navy-600 hover:text-accent-600 transition-colors">
                 Mentions légales
             </a>
         </nav>
 
         <!-- CTA Desktop -->
         <div class="hidden lg:flex items-center gap-6">
-            <a href="/rappel/public/pro/login.php"
-               class="text-sm font-bold text-navy-700 hover:text-accent-600 transition-colors">
-                Connexion
-            </a>
-            <a href="/rappel/public/pro/"
-               class="btn btn-primary btn-sm rounded-xl px-6">
-                Espace Expert
-            </a>
+            <?php if (isLoggedIn()): 
+                $user = getCurrentUser();
+                $isClient = (($user['role'] ?? '') === 'client');
+                $dashboardLink = $isClient ? '/rappel/public/client/dashboard.php' : '/rappel/public/pro/dashboard.php';
+            ?>
+                <a href="<?= $dashboardLink ?>"
+                   class="btn btn-primary btn-sm rounded-xl px-6 flex items-center gap-2">
+                   <i data-lucide="<?= $isClient ? 'user' : 'layout-dashboard' ?>" style="width:16px;height:16px;"></i>
+                   <?= $isClient ? 'Mon Espace' : 'Tableau de Bord' ?>
+                </a>
+                <a href="/rappel/public/logout.php"
+                   class="text-sm font-bold text-navy-400 hover:text-red-500 transition-colors"
+                   title="Déconnexion">
+                    <i data-lucide="power" class="inline-block" style="width:16px;height:16px;"></i>
+                </a>
+            <?php else: ?>
+                <a href="/rappel/public/client/login.php"
+                   class="text-sm font-bold text-navy-700 hover:text-brand-600 transition-colors">
+                    Espace Client
+                </a>
+                <a href="/rappel/public/pro/"
+                   class="btn btn-primary btn-sm rounded-xl px-6">
+                    Espace Expert
+                </a>
+            <?php endif; ?>
         </div>
 
         <!-- Mobile Toggle -->
@@ -59,10 +75,16 @@
     <div id="mobile-menu" class="hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-2xl border-b border-navy-100 p-8 shadow-xl lg:hidden flex-col gap-6">
         <a href="/rappel/public/comment-ca-marche.php" class="text-xl font-bold text-navy-950 text-left block">Comment ça marche</a>
         <a href="/rappel/public/#demande" class="text-xl font-bold text-navy-950 text-left block scroll-link" data-target="demande">Chercher un prestataire</a>
-        <a href="/rappel/public/#legal" class="text-xl font-bold text-navy-950 text-left block scroll-link" data-target="legal">Mentions légales</a>
+        <a href="/rappel/public/legal.php#cookies" class="text-xl font-bold text-navy-950 text-left block">Mentions légales</a>
+        
         <div class="flex flex-col gap-4 pt-6 border-t border-navy-50">
-            <a href="/rappel/public/pro/login.php" class="btn btn-outline w-full h-14 rounded-2xl text-lg font-bold text-center">Connexion Expert</a>
-            <a href="/rappel/public/pro/" class="btn btn-primary w-full h-14 rounded-2xl text-lg font-bold text-center">Rejoindre le Réseau</a>
+            <?php if (isLoggedIn()): ?>
+                <a href="<?= $dashboardLink ?>" class="btn btn-primary w-full h-14 rounded-2xl text-lg font-bold text-center">Accéder à mon espace</a>
+                <a href="/rappel/public/logout.php" class="btn btn-outline w-full h-14 rounded-2xl text-lg font-bold text-center text-red-600">Déconnexion</a>
+            <?php else: ?>
+                <a href="/rappel/public/client/login.php" class="btn btn-outline w-full h-14 rounded-2xl text-lg font-bold text-center">Espace Client</a>
+                <a href="/rappel/public/pro/" class="btn btn-primary w-full h-14 rounded-2xl text-lg font-bold text-center">Espace Expert</a>
+            <?php endif; ?>
         </div>
     </div>
 </header>

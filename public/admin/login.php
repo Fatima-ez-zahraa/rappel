@@ -229,10 +229,6 @@ $pageTitle = 'Admin - Connexion';
                 </a>
 
                 <div>
-                    <div class="badge-pill mb-4">
-                        <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:#7CCB63;"></span>
-                        <span style="color:#6581c7;font-size:0.73rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Acces restreint</span>
-                    </div>
                     <h1 class="font-display font-bold tracking-tight admin-login-title">Administration</h1>
                     <p class="admin-login-subtitle">Reserve aux administrateurs autorises.</p>
                 </div>

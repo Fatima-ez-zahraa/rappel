@@ -22,10 +22,18 @@ $menuItems = [];
 
 if ($isAdminUser) {
     $menuItems[] = ['icon' => 'shield', 'label' => 'Vue globale', 'path' => '/rappel/public/admin/dashboard.php?view=overview', 'admin_view' => 'overview', 'is_admin' => true];
+} elseif ($userRole === 'client') {
+    $menuItems[] = ['icon' => 'layout-dashboard', 'label' => 'Mon Espace', 'path' => '/rappel/public/client/dashboard.php'];
+    $menuItems[] = ['icon' => 'clock', 'label' => 'Mes Demandes', 'path' => '/rappel/public/client/dashboard.php#requests'];
+    $menuItems[] = ['icon' => 'settings', 'label' => 'Paramètres', 'path' => '/rappel/public/client/settings.php'];
 } else {
     $menuItems[] = ['icon' => 'layout-dashboard', 'label' => 'Tableau de bord', 'path' => '/rappel/public/pro/dashboard.php'];
+    $menuItems[] = ['icon' => 'inbox', 'label' => 'Mes Leads', 'path' => '/rappel/public/pro/leads.php'];
+    $menuItems[] = ['icon' => 'users', 'label' => 'Mes Clients', 'path' => '/rappel/public/pro/clients.php'];
+    $menuItems[] = ['icon' => 'file-text', 'label' => 'Mes Devis', 'path' => '/rappel/public/pro/quotes.php'];
+    $menuItems[] = ['icon' => 'bar-chart-2', 'label' => 'Performance', 'path' => '/rappel/public/pro/performance.php'];
     $menuItems[] = ['icon' => 'credit-card', 'label' => 'Plans & Tarifs', 'path' => '/rappel/public/pro/pricing.php'];
-    $menuItems[] = ['icon' => 'settings', 'label' => 'Parametres', 'path' => '/rappel/public/pro/settings.php'];
+    $menuItems[] = ['icon' => 'settings', 'label' => 'Paramètres', 'path' => '/rappel/public/pro/settings.php'];
 }
 
 if ($isAdminUser) {
@@ -56,63 +64,77 @@ if ($isAdminUser) {
 
     <!-- Navigation -->
     <nav class="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-        <?php
-        $adminSeparatorShown = false;
-        foreach ($menuItems as $item):
-            $itemPath = parse_url($item['path'], PHP_URL_PATH);
-            $itemQuery = parse_url($item['path'], PHP_URL_QUERY) ?? '';
-            parse_str($itemQuery, $itemQueryParams);
-            $isAdminItem = !empty($item['is_admin']);
+        <div class="px-3 mb-6">
+            <p class="text-[11px] font-black text-navy-400 uppercase tracking-[0.2em] mb-4 sidebar-label">Menu Principal</p>
+            <?php
+            $adminSeparatorShown = false;
+            foreach ($menuItems as $item):
+                $itemPath = parse_url($item['path'], PHP_URL_PATH);
+                $itemQuery = parse_url($item['path'], PHP_URL_QUERY) ?? '';
+                parse_str($itemQuery, $itemQueryParams);
+                $isAdminItem = !empty($item['is_admin']);
 
-            if (strpos($itemPath, '/rappel/public/admin/dashboard.php') === 0) {
-                $itemView = $item['admin_view'] ?? ($itemQueryParams['view'] ?? 'overview');
-                $isActive = (strpos($currentPath, '/rappel/public/admin/') === 0) && ($currentAdminView === $itemView);
-            } else {
-                $isActive = $currentPath === $itemPath;
-            }
+                if (strpos($itemPath, '/rappel/public/admin/dashboard.php') === 0) {
+                    $itemView = $item['admin_view'] ?? ($itemQueryParams['view'] ?? 'overview');
+                    $isActive = (strpos($currentPath, '/rappel/public/admin/') === 0) && ($currentAdminView === $itemView);
+                } else {
+                    $isActive = $currentPath === $itemPath;
+                }
 
-            if ($isAdminItem && !$adminSeparatorShown && $isAdminUser):
-                $adminSeparatorShown = true;
-        ?>
-        <div class="admin-nav-separator mx-1 mt-3 mb-2 px-2 py-1.5 rounded-lg flex items-center gap-2">
-            <i data-lucide="shield" style="width:13px;height:13px;flex-shrink:0;"></i>
-            <span class="text-[10px] font-bold uppercase tracking-widest sidebar-label">Administration</span>
-        </div>
-        <?php endif; ?>
-        <a href="<?= htmlspecialchars($item['path']) ?>"
-           class="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden <?= $isAdminItem ? 'admin-nav-item' : '' ?> <?= $isActive ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-navy-800 hover:bg-neutral-50 hover:text-navy-950' ?>">
-            <?php if ($isActive): ?>
-            <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand-600 rounded-r-full"></div>
+                if ($isAdminItem && !$adminSeparatorShown && $isAdminUser):
+                    $adminSeparatorShown = true;
+            ?>
+            <div class="admin-nav-separator mx-1 mt-8 mb-3 px-3 py-2 rounded-lg flex items-center gap-2 bg-navy-950 text-white shadow-lg">
+                <i data-lucide="shield" style="width:14px;height:14px;flex-shrink:0;"></i>
+                <span class="text-xs font-bold uppercase tracking-widest sidebar-label">Administration</span>
+            </div>
             <?php endif; ?>
-            <i data-lucide="<?= htmlspecialchars($item['icon']) ?>"
-               class="min-w-[22px] <?= $isActive ? 'text-brand-600' : 'text-neutral-400 group-hover:text-neutral-700' ?>"
-               style="width:22px;height:22px;"></i>
-            <span class="font-medium whitespace-nowrap sidebar-label"><?= htmlspecialchars($item['label']) ?></span>
-        </a>
-        <?php endforeach; ?>
+            <a href="<?= htmlspecialchars($item['path']) ?>"
+               class="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative overflow-hidden <?= $isAdminItem ? 'admin-nav-item' : '' ?> <?= $isActive ? 'bg-brand-600 text-white shadow-premium' : 'text-navy-800 hover:bg-white hover:shadow-sm hover:text-brand-600' ?>">
+                <i data-lucide="<?= htmlspecialchars($item['icon']) ?>"
+                   class="min-w-[22px] transition-transform group-hover:scale-110 <?= $isActive ? 'text-white' : 'text-navy-400 group-hover:text-brand-500' ?>"
+                   style="width:22px;height:22px;"></i>
+                <span class="font-black text-sm uppercase tracking-wide flex-1 sidebar-label"><?= htmlspecialchars($item['label']) ?></span>
+                <?php if ($isActive): ?>
+                    <div class="absolute right-0 top-3 bottom-3 w-1 bg-white/30 rounded-l-full"></div>
+                <?php endif; ?>
+                <?php if ($item['label'] === 'Leads' && !$isAdminUser): ?>
+                    <span class="bg-accent-500 text-navy-950 text-[10px] font-black px-2 py-0.5 rounded-md sidebar-label shadow-sm">NEW</span>
+                <?php endif; ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+
+
     </nav>
 
-    <!-- User Profile & Footer -->
-    <div class="p-4 border-t border-navy-100/50">
-        <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-navy-50 to-white border border-navy-100 transition-all sidebar-user-section">
+    <!-- User Profile Section v3 -->
+    <div class="p-4 bg-white/40 backdrop-blur-md border-t border-navy-100/30 sidebar-user-container">
+        <?php 
+        $settingsLink = ($userRole === 'client') ? '/rappel/public/client/settings.php' : '/rappel/public/pro/settings.php';
+        ?>
+        <div class="flex items-center gap-3 p-3 rounded-[1.5rem] bg-white border border-navy-100/50 shadow-sm hover:shadow-md transition-all group/user cursor-pointer sidebar-user-section" onclick="window.location='<?= $settingsLink ?>'">
+
             <div class="relative flex-shrink-0">
-                <div class="w-10 h-10 rounded-full bg-navy-900 text-white flex items-center justify-center font-bold shadow-md text-sm">
+                <div class="w-10 h-10 rounded-full bg-navy-950 text-white flex items-center justify-center font-black text-sm group-hover/user:scale-105 transition-transform overflow-hidden">
                     <?= strtoupper(substr($userEmail, 0, 1)) ?>
                 </div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent-500 border-2 border-white rounded-full shadow-sm animate-pulse-slow"></div>
             </div>
             <div class="overflow-hidden sidebar-user-info">
-                <p class="text-sm font-bold text-navy-950 truncate">
+                <p class="text-xs font-black text-navy-950 truncate uppercase tracking-tight">
                     <?= htmlspecialchars(explode('@', $userEmail)[0]) ?>
                 </p>
-                <p class="text-xs text-navy-700 font-semibold truncate lowercase">
+                <p class="text-[11px] text-navy-400 font-bold truncate uppercase tracking-widest">
                     <?= htmlspecialchars($userRole) ?>
                 </p>
             </div>
         </div>
 
         <a href="/rappel/public/logout.php"
-           class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 transition-colors font-bold sidebar-logout">
-            <span class="sidebar-label">Se deconnecter</span>
+           class="mt-4 w-full inline-flex items-center justify-center gap-3 p-4 text-navy-400 hover:text-red-500 transition-colors font-black uppercase tracking-[0.2em] text-[11px] group sidebar-logout-btn">
+            <i data-lucide="power" class="group-hover:rotate-90 transition-transform duration-500" style="width:16px;height:16px;"></i>
+            <span class="sidebar-label sidebar-logout-text">Déconnexion</span>
         </a>
     </div>
 

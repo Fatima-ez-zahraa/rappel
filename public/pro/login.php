@@ -64,6 +64,11 @@ $redirect = $_GET['redirect'] ?? '/rappel/public/pro/dashboard.php';
                             </div>
                             <input type="password" id="login-password" class="form-input pl-12 rounded-2xl" placeholder="••••••••" required>
                         </div>
+                        <div class="flex justify-end pt-2">
+                            <a href="/rappel/public/forgot-password.php" class="text-xs font-bold text-navy-400 hover:text-accent-600 transition-colors">
+                                Mot de passe oublié ?
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -90,7 +95,7 @@ $redirect = $_GET['redirect'] ?? '/rappel/public/pro/dashboard.php';
     </div>
 </div>
 
-<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.1"></script>
 <script>
 const REDIRECT_URL = '<?= htmlspecialchars($redirect) ?>';
 

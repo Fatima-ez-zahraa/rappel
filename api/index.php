@@ -70,6 +70,10 @@ try {
                 $auth->resendActivationEmail();
             } elseif ($action == 'profile') {
                 $auth->getProfile();
+            } elseif ($action == 'forgot-password' && $_SERVER['REQUEST_METHOD'] == 'POST') {
+                $auth->forgotPassword();
+            } elseif ($action == 'reset-password' && $_SERVER['REQUEST_METHOD'] == 'POST') {
+                $auth->resetPassword();
             } else {
                 http_response_code(404);
                 echo json_encode(['error' => 'Endpoint not found (auth action)']);
@@ -98,29 +102,41 @@ try {
 
         case 'leads':
             $leads = new LeadsController();
-            // Map $action to $id if it looks like a UUID or if it's not a known action
-            $leadId = $id;
-            if (empty($leadId) && !empty($action) && $action !== 'manual') {
-                $leadId = $action;
-            }
+            $method = $_SERVER['REQUEST_METHOD'];
+            $leadId = $parts[1] ?? '';
+            $subAction = $parts[2] ?? '';
 
-            if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+            if ($method == 'GET') {
                 if ($leadId) {
-                    $leads->get($leadId);
+                    if ($subAction === 'interactions') {
+                        $leads->getInteractions($leadId);
+                    } else {
+                        $leads->get($leadId);
+                    }
                 } else {
                     $leads->getAll();
                 }
-            } elseif ($_SERVER['REQUEST_METHOD'] == 'POST') {
-                if ($action == 'manual') {
+            } elseif ($method == 'POST') {
+                if ($leadId === 'manual') {
                     $leads->createManual();
+                } elseif ($leadId && $subAction === 'claim') {
+                    $leads->claim($leadId);
+                } elseif ($leadId && $subAction === 'interactions') {
+                    $leads->addInteraction($leadId);
                 } else {
                     $leads->create();
                 }
-            } elseif ($_SERVER['REQUEST_METHOD'] == 'PATCH' && $leadId) {
-                $leads->update($leadId);
+            } elseif ($method == 'PATCH' && $leadId) {
+                if ($leadId === 'claim' && $subAction) {
+                    $leads->claim($subAction);
+                } else {
+                    $leads->update($leadId);
+                }
+            } elseif ($method == 'DELETE' && $leadId === 'interactions' && $subAction) {
+                $leads->deleteInteraction($subAction);
             } else {
                 http_response_code(404);
-                echo json_encode(['error' => 'Endpoint not found (leads)', 'path' => $path, 'method' => $_SERVER['REQUEST_METHOD']]);
+                echo json_encode(['error' => 'Endpoint not found (leads)', 'path' => $path, 'method' => $method]);
             }
             break;
 
@@ -149,6 +165,8 @@ try {
             $company = new CompanyController();
             if ($action == 'create-checkout-session') {
                 $company->createCheckout();
+            } elseif ($action == 'webhook') {
+                $company->handleWebhook();
             } else {
                 http_response_code(404);
                 echo json_encode(['error' => 'Endpoint not found']);
@@ -159,6 +177,42 @@ try {
             $company = new CompanyController();
             if ($_SERVER['REQUEST_METHOD'] == 'GET') {
                 $company->getPlans();
+            } else {
+                http_response_code(404);
+                echo json_encode(['error' => 'Endpoint not found']);
+            }
+            break;
+
+        case 'invoices':
+            $company = new CompanyController();
+            if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+                if ($action) {
+                    $company->getInvoice($action);
+                } else {
+                    $company->getInvoices();
+                }
+            } elseif ($_SERVER['REQUEST_METHOD'] == 'POST' && $action && $id === 'send') {
+                $company->sendInvoiceEmail($action);
+            } else {
+                http_response_code(404);
+                echo json_encode(['error' => 'Endpoint not found']);
+            }
+            break;
+
+        case 'client':
+            $company = new CompanyController();
+            if ($action == 'stats' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getClientDashboardStats();
+            } elseif ($action == 'quotes' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getClientQuotes();
+            } elseif ($action == 'accept-quote' && $_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
+                $company->acceptQuote($id);
+            } elseif ($action == 'refuse-quote' && $_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
+                $company->refuseQuote($id);
+            } elseif ($action == 'export' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->exportClientData();
+            } elseif ($action == 'delete' && $_SERVER['REQUEST_METHOD'] == 'DELETE') {
+                $company->deleteClientAccount();
             } else {
                 http_response_code(404);
                 echo json_encode(['error' => 'Endpoint not found']);

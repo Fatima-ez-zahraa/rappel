@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-define('API_URL', 'http://localhost/rappel/api');
+define('API_URL', 'http://127.0.0.1/rappel/api');
 
 function isLoggedIn(): bool {
     return isset($_SESSION['rappel_token']) && !empty($_SESSION['rappel_token']);
@@ -28,6 +28,16 @@ function isVerified(): bool {
     return ($user['is_verified'] ?? false) || isAdmin();
 }
 
+function isProvider(): bool {
+    $user = getCurrentUser();
+    return $user && ($user['role'] ?? '') === 'provider';
+}
+
+function isClient(): bool {
+    $user = getCurrentUser();
+    return $user && ($user['role'] ?? '') === 'client';
+}
+
 function hasSubscription(): bool {
     $user = getCurrentUser();
     if (!$user) return false;
@@ -36,7 +46,12 @@ function hasSubscription(): bool {
 
 function requireAuth(bool $requireVerified = true): void {
     if (!isLoggedIn()) {
-        header('Location: /rappel/public/pro/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+        $path = $_SERVER['REQUEST_URI'];
+        $loginUrl = '/rappel/public/pro/login.php';
+        if (strpos($path, '/rappel/public/client/') === 0) {
+            $loginUrl = '/rappel/public/client/login.php';
+        }
+        header('Location: ' . $loginUrl . '?redirect=' . urlencode($path));
         exit;
     }
     if ($requireVerified && !isVerified()) {
@@ -85,3 +100,4 @@ function syncUser(): void {
         }
     }
 }
+?>

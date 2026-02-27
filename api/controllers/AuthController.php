@@ -53,22 +53,29 @@ class AuthController
             );
 
             $this->user->password = password_hash($data->password, PASSWORD_BCRYPT);
-            $this->user->first_name = $data->firstName ?? '';
-            $this->user->last_name = $data->lastName ?? '';
+            $this->user->first_name = $data->first_name ?? $data->firstName ?? ''; 
+            $this->user->last_name = $data->last_name ?? $data->lastName ?? '';
             $this->user->siret = $data->siret ?? null;
-            $this->user->company_name = $data->companyName ?? null;
-            $this->user->role = 'provider'; // Par défaut
+            $this->user->company_name = $data->company_name ?? $data->companyName ?? null;
+            $this->user->role = $data->role ?? 'provider';
 
             // Autres champs
-            $this->user->creation_year = $data->creationYear ?? null;
+            $this->user->creation_year = $data->creation_year ?? $data->creationYear ?? null;
             $this->user->address = $data->address ?? null;
             $this->user->zip = $data->zip ?? null;
             $this->user->city = $data->city ?? null;
             $this->user->phone = $data->phone ?? null;
-            $this->user->legal_form = $data->legalForm ?? null;
+            $this->user->legal_form = $data->legal_form ?? $data->legalForm ?? null;
+            $this->user->description = $data->description ?? null;
+            $this->user->zone = $data->zone ?? null;
 
             // JSON Encode sectors
-            $this->user->sectors = isset($data->sectors) ? json_encode($data->sectors) : json_encode([]);
+            $sectors = $data->sectors ?? $data->sector ?? [];
+            if (is_string($sectors)) {
+                $this->user->sectors = json_encode([$sectors]);
+            } else {
+                $this->user->sectors = json_encode($sectors);
+            }
 
             // Générer le code de vérification (6 chiffres)
             $verification_code = sprintf("%06d", mt_rand(0, 999999));
@@ -76,6 +83,13 @@ class AuthController
             $this->user->is_verified = 0;
 
             if ($this->user->create()) {
+                // Link any existing anonymous leads to this new user by email
+                $linkQuery = "UPDATE leads SET user_id = :user_id WHERE email = :email AND user_id IS NULL";
+                $linkStmt = $this->db->prepare($linkQuery);
+                $linkStmt->bindParam(':user_id', $this->user->id);
+                $linkStmt->bindParam(':email', $this->user->email);
+                $linkStmt->execute();
+
                 http_response_code(201);
 
                 $token_payload = [
@@ -101,7 +115,18 @@ class AuthController
                             "email" => $this->user->email,
                             "first_name" => $this->user->first_name,
                             "last_name" => $this->user->last_name,
-                            "role" => $this->user->role
+                            "role" => $this->user->role,
+                            "company_name" => $this->user->company_name,
+                            "siret" => $this->user->siret,
+                            "phone" => $this->user->phone,
+                            "address" => $this->user->address,
+                            "city" => $this->user->city,
+                            "zip" => $this->user->zip,
+                            "creation_year" => $this->user->creation_year,
+                            "legal_form" => $this->user->legal_form,
+                            "description" => $this->user->description,
+                            "zone" => $this->user->zone,
+                            "sectors" => $this->user->sectors
                         ],
                         "session" => [
                             "access_token" => $token
@@ -159,14 +184,25 @@ class AuthController
 
                 http_response_code(200);
                 echo json_encode([
-                    "user" => [
-                        "id" => $this->user->id,
-                        "email" => $this->user->email,
-                        "first_name" => $this->user->first_name,
-                        "last_name" => $this->user->last_name,
-                        "role" => $this->user->role,
-                        "is_verified" => (bool)$this->user->is_verified
-                    ],
+                        "user" => [
+                            "id" => $this->user->id,
+                            "email" => $this->user->email,
+                            "first_name" => $this->user->first_name,
+                            "last_name" => $this->user->last_name,
+                            "role" => $this->user->role,
+                            "is_verified" => (bool)$this->user->is_verified,
+                            "company_name" => $this->user->company_name,
+                            "siret" => $this->user->siret,
+                            "phone" => $this->user->phone,
+                            "address" => $this->user->address,
+                            "city" => $this->user->city,
+                            "zip" => $this->user->zip,
+                            "creation_year" => $this->user->creation_year,
+                            "legal_form" => $this->user->legal_form,
+                            "description" => $this->user->description,
+                            "zone" => $this->user->zone,
+                            "sectors" => $this->user->sectors
+                        ],
                     "session" => [
                         "access_token" => $token
                     ]
@@ -265,7 +301,18 @@ class AuthController
                             "first_name" => $this->user->first_name,
                             "last_name" => $this->user->last_name,
                             "role" => $this->user->role,
-                            "is_verified" => true
+                            "is_verified" => true,
+                            "company_name" => $this->user->company_name,
+                            "siret" => $this->user->siret,
+                            "phone" => $this->user->phone,
+                            "address" => $this->user->address,
+                            "city" => $this->user->city,
+                            "zip" => $this->user->zip,
+                            "creation_year" => $this->user->creation_year,
+                            "legal_form" => $this->user->legal_form,
+                            "description" => $this->user->description,
+                            "zone" => $this->user->zone,
+                            "sectors" => $this->user->sectors
                         ],
                         "session" => [
                             "access_token" => $token
@@ -366,7 +413,18 @@ class AuthController
                             "city" => $this->user->city,
                             "zip" => $this->user->zip,
                             "creation_year" => $this->user->creation_year,
-                            "legal_form" => $this->user->legal_form
+                            "legal_form" => $this->user->legal_form,
+                            "sectors" => $this->user->sectors,
+                            "description" => $this->user->description,
+                            "zone" => $this->user->zone,
+                            "subscription" => [
+                                "plan_id" => $this->user->plan_id,
+                                "plan_name" => $this->user->plan_name,
+                                "plan_price" => $this->user->plan_price,
+                                "lead_credits" => $this->user->lead_credits,
+                                "max_leads" => $this->user->max_leads,
+                                "status" => $this->user->subscription_status
+                            ]
                         ]
                     ]);
                     return;
@@ -391,6 +449,17 @@ class AuthController
                 $this->user->id = $payload['id'];
                 $data = json_decode(file_get_contents("php://input"), true);
                 
+                // Normalize sectors if present
+                if (isset($data['sectors'])) {
+                    if (is_string($data['sectors'])) {
+                        // Handle comma-separated list
+                        $sectors = array_map('trim', explode(',', $data['sectors']));
+                        $data['sectors'] = json_encode(array_filter($sectors));
+                    } else if (is_array($data['sectors'])) {
+                        $data['sectors'] = json_encode($data['sectors']);
+                    }
+                }
+
                 if ($this->user->update($data)) {
                     if ($this->user->readOne()) {
                         http_response_code(200);
@@ -410,7 +479,10 @@ class AuthController
                                 "city" => $this->user->city,
                                 "zip" => $this->user->zip,
                                 "creation_year" => $this->user->creation_year,
-                                "legal_form" => $this->user->legal_form
+                                "legal_form" => $this->user->legal_form,
+                                "sectors" => $this->user->sectors,
+                                "description" => $this->user->description,
+                                "zone" => $this->user->zone
                             ]
                         ]);
                     } else {
@@ -427,6 +499,67 @@ class AuthController
 
         http_response_code(401);
         echo json_encode(["error" => "Non autorisé"]);
+    }
+
+    public function forgotPassword()
+    {
+        $data = json_decode(file_get_contents("php://input"));
+        if (empty($data->email)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Email requis."]);
+            return;
+        }
+
+        $this->user->email = $data->email;
+        if ($this->user->emailExists()) {
+            // Generate token
+            $token = bin2hex(random_bytes(32));
+            // Expire in 1 hour
+            $expires = date("Y-m-d H:i:s", time() + 3600);
+
+            if ($this->user->updateResetToken($data->email, $token, $expires)) {
+                // Determine base URL (simplified for now, should be from config)
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+                $host = $_SERVER['HTTP_HOST'];
+                $reset_link = "$protocol://$host/rappel/public/reset-password.php?token=$token";
+
+                if ($this->mailer->sendResetPasswordEmail($this->user->email, $this->user->first_name, $reset_link)) {
+                    echo json_encode(["message" => "Un email de réinitialisation a été envoyé."]);
+                } else {
+                    http_response_code(500);
+                    echo json_encode(["error" => "Erreur lors de l'envoi de l'email."]);
+                }
+            } else {
+                http_response_code(500);
+                echo json_encode(["error" => "Erreur lors de la génération du jeton."]);
+            }
+        } else {
+            // Security: don't reveal if email exists or not
+            echo json_encode(["message" => "Si cet email existe, un lien de réinitialisation a été envoyé."]);
+        }
+    }
+
+    public function resetPassword()
+    {
+        $data = json_decode(file_get_contents("php://input"));
+        if (empty($data->token) || empty($data->password)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Token et nouveau mot de passe requis."]);
+            return;
+        }
+
+        if ($this->user->findByResetToken($data->token)) {
+            $hashedPassword = password_hash($data->password, PASSWORD_BCRYPT);
+            if ($this->user->resetPassword($this->user->id, $hashedPassword)) {
+                echo json_encode(["message" => "Votre mot de passe a été réinitialisé avec succès."]);
+            } else {
+                http_response_code(500);
+                echo json_encode(["error" => "Erreur lors de la réinitialisation."]);
+            }
+        } else {
+            http_response_code(400);
+            echo json_encode(["error" => "Lien invalide ou expiré."]);
+        }
     }
 }
 ?>

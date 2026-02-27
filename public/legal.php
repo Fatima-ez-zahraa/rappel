@@ -50,19 +50,14 @@ $pageTitle = 'Mentions Légales & Politiques';
                         
                         <a href="#confidentialite" class="sidebar-link group flex items-center gap-4 px-4 py-3.5 rounded-2xl border border-transparent hover:bg-white hover:shadow-sm transition-all duration-300 text-navy-700 font-bold" data-target="confidentialite">
                             <i data-lucide="shield" class="w-5 h-5 text-navy-300 group-hover:text-indigo-500 transition-colors"></i>
-                            <span class="text-sm">Confidentialité</span>
+                            <span class="text-sm">POLITIQUE DE CONFIDENTIALITÉ</span>
                         </a>
                         
                         <a href="#cgu" class="sidebar-link group flex items-center gap-4 px-4 py-3.5 rounded-2xl border border-transparent hover:bg-white hover:shadow-sm transition-all duration-300 text-navy-700 font-bold" data-target="cgu">
                             <i data-lucide="file-text" class="w-5 h-5 text-navy-300 group-hover:text-emerald-500 transition-colors"></i>
-                            <span class="text-sm">CGU</span>
+                            <span class="text-sm">CONDITIONS GÉNÉRALES D’UTILISATION</span>
                         </a>
                     </nav>
-
-                    <button onclick="window.print()" class="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-navy-950 text-white font-bold hover:bg-navy-900 transition-all shadow-lg shadow-navy-950/20 group">
-                        <i data-lucide="printer" class="w-5 h-5 text-navy-400 group-hover:text-white transition-colors"></i>
-                        <span>Imprimer</span>
-                    </button>
                     
                 
                 </div>
@@ -134,7 +129,7 @@ $pageTitle = 'Mentions Légales & Politiques';
                             <i data-lucide="shield" style="width:32px;height:32px;"></i>
                         </div>
                         <div>
-                            <h2 class="text-3xl font-display font-black text-navy-950 tracking-tight">Confidentialité</h2>
+                            <h2 class="text-3xl font-display font-black text-navy-950 tracking-tight">POLITIQUE DE CONFIDENTIALITÉ</h2>
                             <p class="text-navy-400 text-xs font-bold uppercase tracking-[0.2em] mt-2">Dernière mise à jour : 18 Février 2026</p>
                         </div>
                     </div>
@@ -157,6 +152,7 @@ $pageTitle = 'Mentions Légales & Politiques';
                             <div>
                                 <h4 class="text-sm font-bold uppercase text-indigo-600 mb-4 tracking-widest">Base Légale</h4>
                                 <p class="text-sm leading-relaxed font-medium">Le traitement repose sur l'<strong>intérêt légitime</strong> de répondre à votre demande et le <strong>consentement</strong> explicite recueilli lors de l'envoi du formulaire.</p>
+                                <p class="text-sm">L’utilisation du Service implique l’acceptation des CONDITIONS GÉNÉRALES D’UTILISATION. En validant, vous acceptez notre POLITIQUE DE CONFIDENTIALITÉ.</p>
                             </div>
                         </div>
 
@@ -192,7 +188,7 @@ $pageTitle = 'Mentions Légales & Politiques';
                             <i data-lucide="file-text" style="width:32px;height:32px;"></i>
                         </div>
                         <div>
-                            <h2 class="text-3xl font-display font-black text-navy-950 tracking-tight">Conditions Générales</h2>
+                            <h2 class="text-3xl font-display font-black text-navy-950 tracking-tight">CONDITIONS GÉNÉRALES D’UTILISATION</h2>
                             <p class="text-navy-400 text-xs font-bold uppercase tracking-[0.2em] mt-2">Dernière mise à jour : 18 Février 2026</p>
                         </div>
                     </div>
@@ -200,7 +196,7 @@ $pageTitle = 'Mentions Légales & Politiques';
                     <div class="prose prose-navy max-w-none space-y-10 text-navy-900 leading-relaxed">
                         <div class="space-y-6">
                             <h3 class="text-xl font-bold mb-4">Article 1 - Objet</h3>
-                            <p>Les présentes CGU régissent l'utilisation de la plateforme <strong>rappelez-moi.co</strong>. Elles ont pour objet de définir les modalités de mise en relation entre les utilisateurs et les professionnels.</p>
+                            <p>Les présentes CONDITIONS GÉNÉRALES D’UTILISATION régissent l'utilisation de la plateforme <strong>rappelez-moi.co</strong>. Elles ont pour objet de définir les modalités de mise en relation entre les utilisateurs et les professionnels.</p>
                         </div>
                         
                         <div class="p-8 bg-emerald-50/30 rounded-3xl border border-emerald-100/50">

@@ -22,8 +22,8 @@ $showSettings = $view === 'settings';
 
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
     <div class="animate-fade-in-up">
-        <h1 class="text-4xl font-display font-black text-white tracking-tight">Pilotage Admin</h1>
-        <p class="text-navy-400 font-medium mt-1 text-sm">Supervision en temps réel des flux et opportunités</p>
+        <h1 class="text-4xl font-display font-black text-navy-950 tracking-tight">Pilotage Admin</h1>
+        <p class="text-navy-600 font-medium mt-1 text-sm">Supervision en temps réel des flux et opportunités</p>
     </div>
 
     <!-- View selector tabs -->
@@ -43,8 +43,8 @@ $showSettings = $view === 'settings';
         ?>
         <a href="?view=<?= $viewKey ?>"
            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-300 border <?= $isCurrentView
-               ? 'bg-accent-500/20 border-accent-500/40 text-accent-400 shadow-[0_0_15px_rgba(124,203,99,0.1)]'
-               : 'bg-white/5 border-white/10 text-navy-400 hover:bg-white/10 hover:border-white/20' ?>">
+               ? 'bg-accent-500/20 border-accent-500/40 text-accent-600 shadow-[0_0_15px_rgba(124,203,99,0.1)]'
+               : 'bg-white/40 border-navy-100 text-navy-500 hover:bg-white/60 hover:border-navy-200' ?>">
             <i data-lucide="<?= $viewMeta['icon'] ?>" style="width:14px;height:14px;"></i>
             <?= $viewMeta['label'] ?>
         </a>
@@ -57,9 +57,9 @@ $showSettings = $view === 'settings';
 <div id="admin-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
     <?php for ($i = 0; $i < 4; $i++): ?>
     <div class="card p-6 min-h-[120px] flex flex-col justify-center animate-pulse">
-        <div class="w-10 h-10 rounded-xl bg-white/5 mb-4"></div>
-        <div class="h-3 bg-white/10 rounded w-2/3 mb-2"></div>
-        <div class="h-6 bg-white/10 rounded w-1/2"></div>
+        <div class="w-10 h-10 rounded-xl bg-navy-100 mb-4"></div>
+        <div class="h-3 bg-navy-100 rounded w-2/3 mb-2"></div>
+        <div class="h-6 bg-navy-100 rounded w-1/2"></div>
     </div>
     <?php endfor; ?>
 </div>
@@ -114,15 +114,16 @@ $showSettings = $view === 'settings';
                 <tr class="text-left text-navy-500 border-b border-navy-100">
                     <th class="py-2 pr-3">Prestataire</th>
                     <th class="py-2 pr-3">Contact</th>
-                    <th class="py-2 pr-3">Niches</th>
+                    <!-- <th class="py-2 pr-3">Niches</th> -->
                     <th class="py-2 pr-3">Forfait</th>
                     <th class="py-2 pr-3">Leads J/S/M</th>
                     <th class="py-2 pr-3">Total</th>
                     <th class="py-2 pr-3 text-right">Abonnement</th>
+                    <th class="py-2 pr-3 text-right">Actions</th>
                 </tr>
             </thead>
             <tbody id="providers-table-body">
-                <tr><td colspan="6" class="py-8 text-center text-navy-400">Chargement...</td></tr>
+                <tr><td colspan="7" class="py-8 text-center text-navy-400">Chargement...</td></tr>
             </tbody>
         </table>
     </div>
@@ -142,12 +143,13 @@ $showSettings = $view === 'settings';
                     <th class="py-2 pr-3">Secteur</th>
                     <th class="py-2 pr-3">Besoin</th>
                     <th class="py-2 pr-3">Budget</th>
+                    <th class="py-2 pr-3">CP / Ville</th>
                     <th class="py-2 pr-3">Statut</th>
                     <th class="py-2 pr-3">Assigné à</th>
                 </tr>
             </thead>
             <tbody id="leads-table-body">
-                <tr><td colspan="6" class="py-8 text-center text-navy-400">Chargement...</td></tr>
+                <tr><td colspan="7" class="py-8 text-center text-navy-400">Chargement...</td></tr>
             </tbody>
         </table>
     </div>
@@ -178,38 +180,96 @@ $showSettings = $view === 'settings';
 <?php endif; ?>
 
 <?php if ($showAnalytics): ?>
-<section id="admin-analytics" class="card p-6 mb-8">
-    <div class="flex items-center justify-between mb-5">
-        <h2 class="text-lg font-display font-bold text-navy-950">Forfaits et cadence des leads</h2>
+<section id="admin-analytics" class="space-y-8 mb-10 overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-2">
+        <div>
+            <h2 class="text-2xl font-display font-black text-navy-950 tracking-tight uppercase">Analytique Globale</h2>
+            <p class="text-navy-400 text-xs font-black uppercase tracking-widest mt-1">Intelligence et performance du réseau</p>
+        </div>
     </div>
 
+    <div class="grid lg:grid-cols-2 gap-8">
+        <!-- Status Distribution -->
+        <div class="card p-8 bg-navy-900/50 border-white/5 shadow-2xl">
+            <div class="flex items-center justify-between mb-10">
+                <div>
+                    <p class="text-[10px] font-black text-accent-400 uppercase tracking-[0.2em] mb-1">Qualité</p>
+                    <h3 class="text-xl font-display font-black text-navy-950 tracking-tight uppercase">Répartition Leads</h3>
+                </div>
+                <div class="h-10 w-10 bg-accent-500/10 rounded-xl flex items-center justify-center text-accent-400">
+                    <i data-lucide="pie-chart" style="width:20px;height:20px;"></i>
+                </div>
+            </div>
+            <div id="status-distribution" class="space-y-6">
+                <!-- JS Render -->
+                <div class="py-12 flex justify-center opacity-20">
+                    <i data-lucide="loader-2" class="animate-spin" style="width:32px;height:32px;"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Activity -->
+        <div class="card p-8 bg-navy-900/50 border-white/5 shadow-2xl">
+            <div class="flex items-center justify-between mb-10">
+                <div>
+                    <p class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">Volume</p>
+                    <h3 class="text-xl font-display font-black text-navy-950 tracking-tight uppercase">Activité Mensuelle</h3>
+                </div>
+                <div class="h-10 w-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400">
+                    <i data-lucide="trending-up" style="width:20px;height:20px;"></i>
+                </div>
+            </div>
+            <div id="monthly-activity-chart" class="flex justify-between h-48 gap-2 pt-8">
+                <!-- JS Render -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Sector Impact -->
+    <div class="card p-8 bg-navy-900/50 border-white/5 shadow-2xl">
+        <div class="flex items-center justify-between mb-10">
+            <div>
+                <p class="text-[10px] font-black text-brand-400 uppercase tracking-[0.2em] mb-1">Impact</p>
+                <h3 class="text-xl font-display font-black text-navy-950 tracking-tight uppercase">Performance Sectorielle</h3>
+            </div>
+            <div class="h-10 w-10 bg-brand-500/10 rounded-xl flex items-center justify-center text-brand-400">
+                <i data-lucide="activity" style="width:20px;height:20px;"></i>
+            </div>
+        </div>
+        <div id="admin-sector-impact" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- JS Render -->
+        </div>
+    </div>
+
+    <!-- Legacy Tables (Optional but kept as technical views) -->
     <div class="grid lg:grid-cols-2 gap-5">
-        <div class="rounded-xl border border-navy-100 p-4 overflow-auto">
-            <p class="text-xs font-bold uppercase tracking-wider text-navy-500 mb-2">Forfait par prestataire</p>
-            <table class="w-full text-sm">
+        <div class="rounded-xl border border-navy-100 p-4 overflow-auto bg-white/40">
+            <p class="text-[9px] font-black uppercase tracking-widest text-navy-950 mb-4">Cadence par prestataire</p>
+            <table class="w-full text-[11px]">
                 <thead>
-                    <tr class="text-left text-navy-500 border-b border-navy-100">
+                    <tr class="text-left text-navy-900 border-b border-navy-100">
                         <th class="py-2 pr-2">Prestataire</th>
                         <th class="py-2 pr-2">Forfait</th>
                         <th class="py-2 pr-2">Leads J/S/M</th>
                     </tr>
                 </thead>
-                <tbody id="plans-table-body">
-                    <tr><td colspan="3" class="py-6 text-center text-navy-400">Chargement...</td></tr>
+                <tbody id="plans-table-body" class="text-navy-700 font-medium">
+                    <tr><td colspan="3" class="py-6 text-center text-navy-500 italic">Chargement...</td></tr>
                 </tbody>
             </table>
         </div>
-        <div class="rounded-xl border border-navy-100 p-4 overflow-auto">
-            <p class="text-xs font-bold uppercase tracking-wider text-navy-500 mb-2">Secteurs les plus demandés</p>
-            <table class="w-full text-sm">
+        <div class="rounded-xl border border-navy-100 p-4 overflow-auto bg-white/40">
+            <p class="text-[9px] font-black uppercase tracking-widest text-navy-950 mb-4">Volume brut par secteur</p>
+            <table class="w-full text-[11px]">
                 <thead>
-                    <tr class="text-left text-navy-500 border-b border-navy-100">
+                    <tr class="text-left text-navy-900 border-b border-navy-100">
                         <th class="py-2 pr-2">Secteur</th>
                         <th class="py-2 pr-2">Demandes</th>
                     </tr>
                 </thead>
-                <tbody id="sector-table-body">
-                    <tr><td colspan="2" class="py-6 text-center text-navy-400">Chargement...</td></tr>
+                <tbody id="sector-table-body" class="text-navy-700 font-medium">
+                    <tr><td colspan="2" class="py-6 text-center text-navy-500 italic">Chargement...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -522,6 +582,20 @@ async function toggleSubscription(providerId, newStatus) {
     }
 }
 
+async function updateLeadStatusAdmin(id, newStatus) {
+    try {
+        await apiFetch('/leads/' + id, { 
+            method: 'PATCH', 
+            body: JSON.stringify({ status: newStatus }) 
+        });
+        if (typeof showToast === 'function') showToast('Statut mis à jour', 'success');
+        await loadAdminAll();
+    } catch (err) {
+        console.error('Status update error:', err);
+        if (typeof showToast === 'function') showToast('Erreur lors de la modification du statut', 'error');
+    }
+}
+
 function renderStats(s, analytics = {}) {
     const leadsDay = s.leads_today ?? analytics.leads_today ?? 0;
     const leadsWeek = s.leads_week ?? analytics.leads_week ?? 0;
@@ -563,9 +637,12 @@ function renderProviders(providers) {
     if (!body) return;
 
     if (!providers.length) {
-        body.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-navy-400">Aucun prestataire.</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-navy-400">Aucun prestataire.</td></tr>';
         return;
     }
+    
+    // Cache providers for details view
+    window.adminProvidersData = providers;
 
     body.innerHTML = providers.map((p) => {
         const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'N/A';
@@ -575,21 +652,26 @@ function renderProviders(providers) {
         const cadence = `${p.assigned_leads_day || 0} / ${p.assigned_leads_week || 0} / ${p.assigned_leads_month || 0}`;
         const isActive = p.subscription_status === 'active';
         const actionBtn = isActive 
-            ? `<button onclick="toggleSubscription('${p.id}', 'inactive')" class="btn btn-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs px-2 py-1">Désactiver</button>`
-            : `<button onclick="toggleSubscription('${p.id}', 'active')" class="btn btn-sm rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-2 py-1 border border-emerald-600">Activer</button>`;
+            ? `<button onclick="toggleSubscription('${p.id}', 'inactive')" class="btn btn-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-[10px] px-2 py-1">Désactiver</button>`
+            : `<button onclick="toggleSubscription('${p.id}', 'active')" class="btn btn-sm rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] px-2 py-1 border border-emerald-600">Activer</button>`;
+        
+        const detailsBtn = `<button onclick="showProviderDetails('${p.id}')" class="btn btn-sm rounded-lg border border-navy-200 text-navy-600 hover:bg-navy-50 text-[10px] px-2 py-1">Détails</button>`;
 
         return `
             <tr class="border-b border-navy-50 align-top">
                 <td class="py-3 pr-3">
                     <p class="font-bold text-navy-900">${escapeHtml(p.company_name || fullName)}</p>
-                    <p class="text-xs text-navy-500">${escapeHtml(fullName)}</p>
+                    <p class="text-[11px] text-navy-400">ID: ${escapeHtml(String(p.id).substring(0,8))}</p>
                 </td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(contact || 'N/A')}</td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(niches || '-')}</td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(plan)}</td>
+                <td class="py-3 pr-3">
+                    <p class="text-navy-700">${escapeHtml(p.email || 'N/A')}</p>
+                    <p class="text-[11px] text-navy-400">${escapeHtml(p.phone || '')}</p>
+                </td>
+                <td class="py-3 pr-3 text-navy-700 font-medium">${escapeHtml(plan)}</td>
                 <td class="py-3 pr-3 text-navy-700">${escapeHtml(cadence)}</td>
                 <td class="py-3 pr-3 font-bold text-navy-900">${escapeHtml(p.assigned_leads_total || 0)}</td>
                 <td class="py-3 pr-3 text-right">${actionBtn}</td>
+                <td class="py-3 pr-3 text-right">${detailsBtn}</td>
             </tr>
         `;
     }).join('');
@@ -600,23 +682,54 @@ function renderLeads(leads) {
     if (!body) return;
 
     if (!leads.length) {
-        body.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-navy-400">Aucun lead.</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-navy-400">Aucun lead.</td></tr>';
         return;
     }
-
     body.innerHTML = leads.map((l) => {
-        const client = `${l.name || 'Inconnu'} | ${l.phone || ''} ${l.email ? '| ' + l.email : ''}`;
+        const hasProfile = !!l.client_first_name;
+        const displayName = hasProfile ? `${l.client_first_name} ${l.client_last_name || ''}`.trim() : (l.name || 'Inconnu');
+        const displayPhone = l.client_profile_phone || l.phone || '';
+        const displayEmail = l.email || '';
+        
+        const clientHtml = `
+            <div class="flex flex-col gap-0.5">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-bold text-navy-900">${escapeHtml(displayName)}</span>
+                    ${hasProfile ? '<span class="px-1.5 py-0.5 rounded-md bg-accent-500/10 text-accent-400 text-[8px] font-black uppercase tracking-tighter border border-accent-500/20">Inscrit</span>' : ''}
+                </div>
+                <div class="text-[10px] text-navy-400 font-medium">
+                    ${escapeHtml(displayPhone)} ${displayEmail ? ' | ' + escapeHtml(displayEmail) : ''}
+                </div>
+            </div>
+        `;
+
         const assignedName = `${l.assigned_provider_first_name || ''} ${l.assigned_provider_last_name || ''}`.trim();
         const assignedTo = assignedName || l.assigned_provider_email || '-';
+        
+        const profileCity = l.client_profile_city || l.city;
+        const profileZip = l.client_profile_zip || l.zip_code;
+        const location = [profileZip, profileCity].filter(Boolean).join(' ') || '-';
 
         return `
             <tr class="border-b border-navy-50 align-top">
-                <td class="py-3 pr-3 text-navy-800">${escapeHtml(client)}</td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(l.sector || '-')}</td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(l.need || '-')}</td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(l.budget || 0)}</td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(l.status || 'pending')}</td>
-                <td class="py-3 pr-3 text-navy-700">${escapeHtml(assignedTo)}</td>
+                <td class="py-3 pr-3">${clientHtml}</td>
+                <td class="py-3 pr-3 text-navy-700 font-medium">${escapeHtml(l.sector || '-')}</td>
+                <td class="py-3 pr-3 text-navy-600 italic text-xs leading-tight max-w-[200px] truncate" title="${escapeHtml(l.need || '')}">${escapeHtml(l.need || '-')}</td>
+                <td class="py-3 pr-3 text-navy-700 font-bold">${escapeHtml(l.budget || 0)} €</td>
+                <td class="py-3 pr-3 text-navy-700">
+                    <p class="text-[11px] underline decoration-navy-100">${escapeHtml(location)}</p>
+                    ${l.client_profile_address ? `<p class="text-[9px] text-navy-400 truncate max-w-[120px] mt-0.5" title="${escapeHtml(l.client_profile_address)}">${escapeHtml(l.client_profile_address)}</p>` : ''}
+                </td>
+                <td class="py-3 pr-3">
+                    <select onchange="updateLeadStatusAdmin('${l.id}', this.value)" class="${l.status === 'pending' ? 'bg-amber-100 text-amber-700' : l.status === 'quote_sent' ? 'bg-indigo-100 text-indigo-700' : l.status === 'completed' || l.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : 'bg-navy-100 text-navy-600'} border-none text-[9px] font-black uppercase tracking-widest rounded-lg px-2 py-1 appearance-none cursor-pointer hover:opacity-80 transition-all shadow-sm">
+                        <option value="pending" ${l.status === 'pending' ? 'selected' : ''}>En attente</option>
+                        <option value="processed" ${['assigned', 'assigne', 'processed'].includes(l.status) ? 'selected' : ''}>Assigné</option>
+                        <option value="quote_sent" ${l.status === 'quote_sent' ? 'selected' : ''}>Devis envoyé</option>
+                        <option value="completed" ${['completed', 'closed'].includes(l.status) ? 'selected' : ''}>Terminé</option>
+                        <option value="cancelled" ${l.status === 'cancelled' ? 'selected' : ''}>Annulé</option>
+                    </select>
+                </td>
+                <td class="py-3 pr-3 text-navy-700 font-medium">${escapeHtml(assignedTo)}</td>
             </tr>
         `;
     }).join('');
@@ -644,40 +757,128 @@ function renderDispatchOverview(dispatchData) {
 }
 
 function renderAnalytics(analytics) {
+    if (analytics.distribution) renderStatusDistribution(analytics.distribution);
+    if (analytics.monthly_series) renderMonthlyActivity(analytics.monthly_series);
+    if (analytics.sector_demand) renderSectorImpactAdmin(analytics.sector_demand);
+
     const plansBody = document.getElementById('plans-table-body');
     if (plansBody) {
         const providers = Array.isArray(analytics.providers) ? analytics.providers : [];
-        if (!providers.length) {
-            plansBody.innerHTML = '<tr><td colspan="3" class="py-6 text-center text-navy-400">Aucune donnée forfait.</td></tr>';
-        } else {
-            plansBody.innerHTML = providers.map((p) => {
-                const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'N/A';
-                const cadence = `${p.assigned_leads_day || 0} / ${p.assigned_leads_week || 0} / ${p.assigned_leads_month || 0}`;
-                return `
-                    <tr class="border-b border-navy-50">
-                        <td class="py-2 pr-2">${escapeHtml(fullName)}</td>
-                        <td class="py-2 pr-2">${escapeHtml(p.plan_name || 'Forfait inactif')}</td>
-                        <td class="py-2 pr-2">${escapeHtml(cadence)}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
+        plansBody.innerHTML = providers.length ? providers.map((p) => {
+            const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.company_name || 'N/A';
+            const cadence = `${p.assigned_leads_day || 0} / ${p.assigned_leads_week || 0} / ${p.assigned_leads_month || 0}`;
+            return `<tr class="border-b border-navy-100/50"><td class="py-2 pr-2 text-navy-950 font-bold">${escapeHtml(fullName)}</td><td class="py-2 pr-2">${escapeHtml(p.plan_name || 'Forfait inactif')}</td><td class="py-2 pr-2 font-black text-navy-950">${escapeHtml(cadence)}</td></tr>`;
+        }).join('') : '<tr><td colspan="3" class="py-6 text-center text-navy-400">Aucune donnée forfait.</td></tr>';
     }
 
     const sectorBody = document.getElementById('sector-table-body');
     if (sectorBody) {
         const sectors = Array.isArray(analytics.sector_demand) ? analytics.sector_demand : [];
-        if (!sectors.length) {
-            sectorBody.innerHTML = '<tr><td colspan="2" class="py-6 text-center text-navy-400">Aucune donnée secteur.</td></tr>';
-        } else {
-            sectorBody.innerHTML = sectors.slice(0, 12).map((s) => `
-                <tr class="border-b border-navy-50">
-                    <td class="py-2 pr-2">${escapeHtml(s.sector || 'Non renseigné')}</td>
-                    <td class="py-2 pr-2 font-bold text-navy-900">${escapeHtml(s.demand || 0)}</td>
-                </tr>
-            `).join('');
-        }
+        sectorBody.innerHTML = sectors.length ? sectors.slice(0, 12).map((s) => `
+            <tr class="border-b border-navy-100/50">
+                <td class="py-2 pr-2 text-navy-950 font-bold">${escapeHtml(s.sector || 'Non renseigné')}</td>
+                <td class="py-2 pr-2 font-black text-navy-950">${escapeHtml(s.demand || 0)}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="2" class="py-6 text-center text-navy-400">Aucune donnée secteur.</td></tr>';
     }
+}
+
+function renderStatusDistribution(dist) {
+    const el = document.getElementById('status-distribution');
+    if (!el) return;
+    const total = dist.reduce((sum, d) => sum + parseInt(d.count), 0) || 1;
+    
+    const items = [
+        { label: 'Traités / Clos', statuses: ['processed', 'confirmé', 'closed'], color: 'bg-accent-500' },
+        { label: 'En attente', statuses: ['pending', 'new'], color: 'bg-amber-400' },
+        { label: 'Avoir / Annulés', statuses: ['cancelled', 'junk', 'avoir'], color: 'bg-navy-400' }
+    ];
+
+    el.innerHTML = items.map(item => {
+        const count = dist.filter(d => item.statuses.includes(String(d.status).toLowerCase())).reduce((sum, d) => sum + parseInt(d.count), 0);
+        const pct = Math.round(count/total*100);
+        return `
+            <div class="group">
+                <div class="flex justify-between items-end mb-2">
+                    <p class="text-[10px] font-black text-navy-600 uppercase tracking-widest">${item.label}</p>
+                    <span class="text-lg font-display font-black text-navy-950">${pct}%</span>
+                </div>
+                <div class="h-2 bg-navy-100/50 rounded-full overflow-hidden">
+                    <div class="h-full ${item.color} rounded-full transition-all duration-1000" style="width:${pct}%"></div>
+                </div>
+                <p class="text-[10px] font-bold text-navy-500 mt-2">${count} Leads</p>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderMonthlyActivity(series) {
+    const el = document.getElementById('monthly-activity-chart');
+    if (!el) return;
+    const max = Math.max(...series.map(d => parseInt(d.leads_count)), 1);
+
+    el.innerHTML = series.slice(-6).map(d => {
+        const count = parseInt(d.leads_count) || 0;
+        const h = max > 0 ? Math.round((count / max) * 100) : 0;
+        const month = new Date(d.month_label + '-01').toLocaleDateString('fr-FR', { month: 'short' });
+        return `
+            <div class="flex-1 flex flex-col items-center gap-3 group h-full">
+                <div class="relative w-full flex-1 flex flex-col justify-end min-h-[40px]">
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-navy-950 text-white text-[10px] font-black px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
+                        ${count}
+                    </div>
+                    <div class="w-full bg-indigo-100 rounded-t-lg group-hover:bg-indigo-200 transition-all duration-500 border-x border-t border-indigo-200" style="height: ${h}%">
+                        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-brand-600 to-brand-400 rounded-t-lg opacity-80 group-hover:opacity-100 transition-all duration-700" style="height: 100%"></div>
+                    </div>
+                </div>
+                <span class="text-[9px] font-black text-navy-400 uppercase tracking-widest">${month}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSectorImpactAdmin(data) {
+    const el = document.getElementById('admin-sector-impact');
+    if (!el) return;
+    
+    el.innerHTML = data.slice(0, 6).map((d, idx) => {
+        const total = parseInt(d.demand);
+        const processed = parseInt(d.processed || 0);
+        const pct = total ? Math.round(processed/total*100) : 0;
+        
+        return `
+            <div class="p-6 bg-white/5 rounded-[2rem] border border-navy-100 hover:bg-white/10 transition-all duration-500 group animate-fade-in-up" style="animation-delay: ${idx * 100}ms">
+                <div class="flex items-center justify-between mb-6">
+                    <p class="font-display font-black text-navy-950 uppercase tracking-tight text-sm">${escapeHtml(d.sector)}</p>
+                    <div class="h-8 w-8 flex items-center justify-center rounded-xl bg-accent-500/10 text-accent-400">
+                        <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-navy-400">
+                        <span>Score conversion</span>
+                        <span class="text-navy-950 font-black">${pct}%</span>
+                    </div>
+                    <div class="h-2 bg-navy-100/50 rounded-full overflow-hidden p-0">
+                        <div class="h-full bg-accent-500 rounded-full transition-all duration-1000" style="width:${pct}%"></div>
+                    </div>
+                    
+                    <div class="flex justify-between pt-4 mt-2 border-t border-navy-100/50">
+                        <div>
+                            <p class="text-[8px] font-black text-navy-500 uppercase tracking-widest">Leads</p>
+                            <p class="text-lg font-display font-black text-navy-950">${total}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[8px] font-black text-navy-500 uppercase tracking-widest">Succès</p>
+                            <p class="text-lg font-display font-black text-accent-500">${processed}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function runAutoDispatch() {
@@ -713,6 +914,90 @@ async function runAutoDispatch() {
     }
 }
 
+function showProviderDetails(id) {
+    const p = (window.adminProvidersData || []).find(x => String(x.id) === String(id));
+    if (!p) return;
+    
+    const content = document.getElementById('provider-details-content');
+    if (!content) return;
+    
+    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'N/A';
+    const niches = Array.isArray(p.sectors_list) ? p.sectors_list.join(', ') : 'Aucune';
+    
+    content.innerHTML = `
+        <div class="space-y-8">
+            <div class="flex items-center gap-6 p-6 rounded-[2rem] bg-navy-50 border border-navy-100/50">
+                <div class="w-20 h-20 rounded-full bg-brand-600 text-white flex items-center justify-center text-3xl font-black shadow-lg">
+                    ${(p.company_name || fullName)[0].toUpperCase()}
+                </div>
+                <div>
+                    <h3 class="text-2xl font-display font-black text-navy-950">${escapeHtml(p.company_name || fullName)}</h3>
+                    <p class="text-xs font-bold text-navy-400 uppercase tracking-[0.2em] mt-1">${escapeHtml(fullName)} • ${escapeHtml(p.city || 'Ville inconnue')}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-5 rounded-2xl bg-white border border-navy-100 shadow-sm">
+                    <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">SIRET</p>
+                    <p class="font-bold text-navy-900">${escapeHtml(p.siret || 'N/A')}</p>
+                </div>
+                <div class="p-5 rounded-2xl bg-white border border-navy-100 shadow-sm">
+                    <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">Forme Juridique</p>
+                    <p class="font-bold text-navy-900">${escapeHtml(p.legal_form || 'N/A')}</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="text-xs font-black text-navy-950 uppercase tracking-widest border-b border-navy-100 pb-2">Expertise & Périmètre</h4>
+                <div class="p-5 rounded-2xl bg-white border border-navy-100 shadow-sm space-y-4">
+                    <div>
+                        <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">Secteurs d'activité</p>
+                        <p class="font-bold text-brand-600">${escapeHtml(niches)}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">Zone d'intervention</p>
+                        <p class="font-bold text-navy-900">${escapeHtml(p.zone || 'Non renseignée')}</p>
+                    </div>
+                </div>
+                <div class="p-5 rounded-2xl bg-white border border-navy-100 shadow-sm">
+                    <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">Description de l'offre</p>
+                    <p class="text-sm text-navy-700 leading-relaxed">${escapeHtml(p.description || 'Aucune description disponible.')}</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="text-xs font-black text-navy-950 uppercase tracking-widest border-b border-navy-100 pb-2">Historique d'activité</h4>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="p-4 rounded-xl bg-navy-50 border border-navy-100 text-center">
+                        <p class="text-[8px] font-black text-navy-400 uppercase mb-1">Jour</p>
+                        <p class="text-xl font-display font-black text-navy-950">${p.assigned_leads_day || 0}</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-navy-50 border border-navy-100 text-center">
+                        <p class="text-[8px] font-black text-navy-400 uppercase mb-1">Semaine</p>
+                        <p class="text-xl font-display font-black text-navy-950">${p.assigned_leads_week || 0}</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-navy-50 border border-navy-100 text-center">
+                        <p class="text-[8px] font-black text-navy-400 uppercase mb-1">Mois</p>
+                        <p class="text-xl font-display font-black text-navy-950">${p.assigned_leads_month || 0}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const drawer = document.getElementById('provider-details-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+    if (drawer) drawer.classList.remove('translate-x-full');
+    if (overlay) overlay.classList.remove('hidden');
+}
+
+function closeProviderDetails() {
+    const drawer = document.getElementById('provider-details-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+    if (drawer) drawer.classList.add('translate-x-full');
+    if (overlay) overlay.classList.add('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (ADMIN_VIEW === 'settings') {
         loadAdminSettings();
@@ -745,5 +1030,19 @@ JS;
 $extraScript = str_replace('__PHP_TOKEN__', $safeToken, $extraScript);
 $extraScript = str_replace('__ADMIN_VIEW__', addslashes($view), $extraScript);
 ?>
+
+<!-- Provider Details Side Drawer -->
+<div id="drawer-overlay" class="fixed inset-0 bg-navy-950/40 backdrop-blur-sm z-[100] hidden" onclick="closeProviderDetails()"></div>
+<div id="provider-details-drawer" class="fixed top-0 right-0 w-full max-w-xl h-full bg-white z-[110] shadow-2xl translate-x-full transition-transform duration-500 overflow-y-auto no-scrollbar">
+    <div class="sticky top-0 bg-white border-b border-navy-100 px-8 py-6 flex items-center justify-between z-10">
+        <h2 class="text-xl font-display font-black text-navy-950 uppercase tracking-tight">Détails Prestataire</h2>
+        <button onclick="closeProviderDetails()" class="w-10 h-10 rounded-full bg-navy-50 flex items-center justify-center text-navy-400 hover:bg-navy-100 hover:text-navy-950 transition-all">
+            <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+    </div>
+    <div id="provider-details-content" class="p-8 pb-20">
+        <!-- Filled by JS -->
+    </div>
+</div>
 
 <?php include __DIR__ . '/../includes/dashboard_layout_bottom.php'; ?>

@@ -207,7 +207,7 @@ $pageTitle = 'Comment ça marche';
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
 
-<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.1"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const links = Array.from(document.querySelectorAll('.guide-link'));

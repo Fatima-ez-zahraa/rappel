@@ -4,7 +4,7 @@
 <?php include __DIR__ . '/cookie_banner.php'; ?>
 
 <!-- Dashboard JS -->
-<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
+<script src="/rappel/public/assets/js/app.js?v=4.1"></script>
 <script>
 // Initialize Lucide icons
 if (typeof lucide !== 'undefined') lucide.createIcons();

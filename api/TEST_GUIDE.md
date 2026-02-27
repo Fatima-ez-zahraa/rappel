@@ -1,7 +1,5 @@
 # Guide de Test Rapide - Activation par Email
 
-## Tester l'API avec curl (Windows PowerShell)
-
 ### 1. Créer un compte (et recevoir l'email d'activation)
 
 ```powershell

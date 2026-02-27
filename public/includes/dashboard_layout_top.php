@@ -18,8 +18,7 @@ $headerLogoClass = $isAdminLayout ? 'h-12 w-auto object-contain' : 'h-9 w-auto o
 <?php include __DIR__ . '/sidebar.php'; ?>
 
 <!-- Main Content -->
-<main id="dashboard-main" class="min-h-screen transition-all duration-300 ease-in-out"
-      style="padding-left:260px;">
+<main id="dashboard-main" class="min-h-screen transition-all duration-300 ease-in-out lg:pl-[260px]">
 
     <!-- Mobile Header -->
     <div id="mobile-header" class="sticky top-0 z-20 <?= $isAdminLayout ? 'h-20 bg-zinc-950/90 border-b border-zinc-900 text-zinc-100' : 'h-16 bg-white/70 border-b border-white/50' ?>

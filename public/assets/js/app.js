@@ -1,10 +1,10 @@
-/* ============================================================
-   RAPPEL - Global App JS
-   ============================================================ */
+/*RAPPEL - Global App JS */
 
-const API_URL = 'http://localhost/rappel/api';
+const API_URL = '/rappel/api';
+// Fallback if accessed without /rappel prefix (e.g. root domain)
+const ACTUAL_API_URL = window.API_BASE_URL || (window.location.pathname.startsWith('/rappel') ? '/rappel/api' : '/api');
 
-// ---- Auth helpers (token stored in sessionStorage for JS calls) ----
+// Auth helpers (token stored in sessionStorage for JS calls) 
 const Auth = {
     getToken: () => sessionStorage.getItem('rappel_token') || '',
     setToken: (t) => sessionStorage.setItem('rappel_token', t),
@@ -12,24 +12,62 @@ const Auth = {
         try { return JSON.parse(sessionStorage.getItem('rappel_user') || 'null'); } catch { return null; }
     },
     setUser: (u) => sessionStorage.setItem('rappel_user', JSON.stringify(u)),
+    isLoggedIn: () => !!sessionStorage.getItem('rappel_token'),
     clear: () => { sessionStorage.removeItem('rappel_token'); sessionStorage.removeItem('rappel_user'); },
 };
 
-// ---- API fetch helper ----
-async function apiFetch(endpoint, options = {}) {
+// Global Helpers
+window.escapeHtml = function (value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+};
+
+window.formatRelativeTime = function (dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 0) return "À l'instant";
+    if (diffInSeconds < 60) return `Il y a ${diffInSeconds}s`;
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `Il y a ${diffInMinutes}m`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `Il y a ${diffInHours}h`;
+
+    // Set both to midnight for accurate day difference
+    const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Aujourd'hui";
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return `Il y a ${diffDays} jours`;
+
+    return date.toLocaleDateString('fr-FR');
+};
+
+// API fetch helper 
+window.apiFetch = async function (endpoint, options = {}) {
     const token = Auth.getToken() || (window.PHP_TOKEN || '');
     const headers = {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...(options.headers || {}),
     };
-    const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+    const res = await fetch(`${ACTUAL_API_URL}${endpoint}`, { ...options, headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.message || 'Erreur API');
     return data;
 }
 
-// ---- Header scroll effect ----
+// Header scroll effect
 function initHeader() {
     const header = document.getElementById('main-header');
     if (!header) return;
@@ -46,7 +84,7 @@ function initHeader() {
     update();
 }
 
-// ---- Mobile menu (public header) ----
+// Mobile menu (public header)
 function initMobileMenu() {
     const btn = document.getElementById('mobile-menu-btn');
     const menu = document.getElementById('mobile-menu');
@@ -63,7 +101,7 @@ function initMobileMenu() {
     });
 }
 
-// ---- Smooth scroll for anchor links ----
+// Smooth scroll for anchor links
 function initScrollLinks() {
     document.querySelectorAll('.scroll-link').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -87,7 +125,7 @@ function initScrollLinks() {
     }
 }
 
-// ---- Sidebar (dashboard) ----
+// Sidebar (dashboard)
 let sidebarOpen = true;
 let isMobile = window.innerWidth < 1024;
 
@@ -98,13 +136,25 @@ function updateSidebarState() {
     if (!sidebar) return;
 
     if (isMobile) {
+        // On mobile: sidebar slides in/out via translateX (off-canvas)
+        // Content stays full-width (no padding shift)
         sidebar.style.width = '280px';
-        main && (main.style.paddingLeft = '0');
+        sidebar.classList.remove('sidebar-collapsed');
+        // Remove any desktop padding override
+        if (main) {
+            main.style.paddingLeft = '';
+        }
     } else {
-        sidebar.style.width = sidebarOpen ? '260px' : '80px';
-        main && (main.style.paddingLeft = sidebarOpen ? '260px' : '80px');
+        // On desktop: adjust width and content padding
+        const openWidth = '260px';
+        const collapsedWidth = '80px';
+        sidebar.style.width = sidebarOpen ? openWidth : collapsedWidth;
+        sidebar.classList.toggle('sidebar-collapsed', !sidebarOpen);
+        if (main) {
+            main.style.paddingLeft = sidebarOpen ? openWidth : collapsedWidth;
+        }
         // Show/hide labels
-        document.querySelectorAll('.sidebar-label, .sidebar-user-info, .sidebar-logout').forEach(el => {
+        document.querySelectorAll('.sidebar-label, .sidebar-user-info, .sidebar-logout-text').forEach(el => {
             el.style.display = sidebarOpen ? '' : 'none';
         });
         document.querySelectorAll('.sidebar-logo-full').forEach(el => el.style.display = sidebarOpen ? '' : 'none');
@@ -151,7 +201,7 @@ function initSidebar() {
     updateSidebarState();
 }
 
-// ---- Toast notifications ----
+// Toast notifications 
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     const colors = {
@@ -166,7 +216,8 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 4000);
 }
 
-// ---- Loading spinner helper ----
+// Loading spinner helper
+
 function setButtonLoading(btn, loading, originalText) {
     if (loading) {
         btn.disabled = true;
@@ -178,17 +229,25 @@ function setButtonLoading(btn, loading, originalText) {
     }
 }
 
-// ---- Cookie Consent ----
+// Cookie Consent 
 function initCookies() {
     const banner = document.getElementById('cookie-banner');
     if (!banner) return;
 
+    // Debug: Force show with ?reset_cookies=1
+    if (window.location.search.includes('reset_cookies=1')) {
+        localStorage.removeItem('cookie_consent');
+    }
+
     const consent = localStorage.getItem('cookie_consent');
     if (!consent) {
+        console.log("Cookie banner: showing (no consent found)");
         setTimeout(() => {
             banner.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
             banner.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
-        }, 1500);
+        }, 600);
+    } else {
+        console.log("Cookie banner: hidden (consent already given: " + consent + ")");
     }
 }
 

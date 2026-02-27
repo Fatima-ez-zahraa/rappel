@@ -3,6 +3,7 @@ require_once 'config/db.php';
 require_once 'models/Lead.php';
 require_once 'models/Quote.php';
 require_once 'models/User.php';
+require_once 'models/Invoice.php';
 require_once 'utils/JwtUtils.php';
 
 class CompanyController {
@@ -11,6 +12,7 @@ class CompanyController {
     private $lead;
     private $quote;
     private $user;
+    private $invoice;
     private $jwt;
     private $cacheFile = __DIR__ . '/../cache/legal_forms.json';
     private $cacheExpiry = 86400; // 24 hours
@@ -24,13 +26,14 @@ class CompanyController {
         $this->lead = new Lead($this->db);
         $this->quote = new Quote($this->db);
         $this->user = new User($this->db);
+        $this->invoice = new Invoice($this->db);
         $this->jwt = new JwtUtils();
     }
 
     /**
      * Middleware simple pour vérifier le token
      */
-    private function authenticate()
+    public function authenticate()
     {
         $headers = function_exists('apache_request_headers') ? apache_request_headers() : [];
         $authHeader = $headers['Authorization'] ?? 
@@ -60,7 +63,8 @@ class CompanyController {
      */
     public function getQuotes() {
         $auth = $this->authenticate();
-        $stmt = $this->quote->readByProvider($auth['id']);
+        // Return ALL quotes for providers as requested
+        $stmt = $this->quote->readAll();
         $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($quotes);
     }
@@ -85,8 +89,14 @@ class CompanyController {
         $this->quote->amount = $data->amount;
         $this->quote->items_count = $data->items_count ?? 1;
         $this->quote->status = $data->status ?? 'attente_client';
+        $this->quote->lead_id = $data->lead_id ?? null;
 
         if ($this->quote->create()) {
+            // Also update lead status to quote_sent
+            if (!empty($data->lead_id)) {
+                $updLead = $this->db->prepare("UPDATE leads SET status = 'quote_sent' WHERE id = ?");
+                $updLead->execute([$data->lead_id]);
+            }
             http_response_code(201);
             echo json_encode(["message" => "Devis créé", "id" => $this->quote->id]);
         } else {
@@ -120,6 +130,7 @@ class CompanyController {
         $this->quote->amount = $data->amount ?? $this->quote->amount;
         $this->quote->items_count = $data->items_count ?? $this->quote->items_count;
         $this->quote->status = $data->status ?? $this->quote->status;
+        $this->quote->lead_id = $data->lead_id ?? $this->quote->lead_id;
 
         if ($this->quote->update()) {
             echo json_encode(["message" => "Devis mis à jour"]);
@@ -148,57 +159,110 @@ class CompanyController {
      */
     public function getStats() {
         $auth = $this->authenticate();
+        $providerId = $auth['id'];
         
-        // Basic stats: count leads, count quotes, total quotes amount
-        $leadsStmt = $this->lead->readByProvider($auth['id']);
-        $leadsData = $leadsStmt->fetchAll(PDO::FETCH_ASSOC);
-        $leadsCount = count($leadsData);
+        // 1. Basic Lead Stats (Specific to Provider)
+        $leadStatsStmt = $this->db->prepare("
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN l.status = 'pending' THEN 1 ELSE 0 END) as pending
+            FROM leads l
+            INNER JOIN lead_assignments la ON l.id = la.lead_id
+            WHERE la.provider_id = ?
+        ");
+        $leadStatsStmt->execute([$providerId]);
+        $leadStats = $leadStatsStmt->fetch(PDO::FETCH_ASSOC);
+        
+        $totalLeads = (int)($leadStats['total'] ?? 0);
+        $pendingLeadsCount = (int)($leadStats['pending'] ?? 0);
+        $closedLeads = $totalLeads - $pendingLeadsCount;
 
-        $quotesStmt = $this->quote->readByProvider($auth['id']);
-        $quotesData = $quotesStmt->fetchAll(PDO::FETCH_ASSOC);
-        $quotesCount = count($quotesData);
-        $totalAmount = array_reduce($quotesData, function($carry, $item) {
-            return $carry + $item['amount'];
-        }, 0);
+        // 2. Quote Stats (Specific to Provider)
+        $quoteStatsStmt = $this->db->prepare("
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status IN ('accepted', 'signe') THEN 1 ELSE 0 END) as signed,
+                SUM(amount) as total_amount
+            FROM quotes
+            WHERE provider_id = ?
+        ");
+        $quoteStatsStmt->execute([$providerId]);
+        $quoteStats = $quoteStatsStmt->fetch(PDO::FETCH_ASSOC);
+        
+        $quotesCount = (int)($quoteStats['total'] ?? 0);
+        $signedQuotesCount = (int)($quoteStats['signed'] ?? 0);
+        $totalAmount = (float)($quoteStats['total_amount'] ?? 0);
 
-        $pendingLeadsCount = array_reduce($leadsData, function($carry, $item) {
-            return $carry + ($item['status'] === 'pending' ? 1 : 0);
-        }, 0);
+        $conversionRate = $totalLeads > 0 ? round(($signedQuotesCount / $totalLeads) * 100, 1) : 0;
 
-        // Generate semi-realistic chart data if none exists
-        $weeklyData = [
-            ['name' => 'Lun', 'revenue' => round($totalAmount * 0.1)],
-            ['name' => 'Mar', 'revenue' => round($totalAmount * 0.15)],
-            ['name' => 'Mer', 'revenue' => round($totalAmount * 0.25)],
-            ['name' => 'Jeu', 'revenue' => round($totalAmount * 0.2)],
-            ['name' => 'Ven', 'revenue' => round($totalAmount * 0.3)],
-        ];
+        // 3. Growth Calculation (Revenue month over month)
+        $currentMonthRevenueStmt = $this->db->prepare("
+            SELECT SUM(amount) as amount 
+            FROM quotes 
+            WHERE provider_id = ? AND status IN ('accepted', 'signe') 
+            AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())
+        ");
+        $currentMonthRevenueStmt->execute([$providerId]);
+        $currentMonthRevenue = (float)($currentMonthRevenueStmt->fetchColumn() ?: 0);
 
-        $monthlyData = [
-            ['name' => 'Sem 1', 'revenue' => round($totalAmount * 0.3)],
-            ['name' => 'Sem 2', 'revenue' => round($totalAmount * 0.2)],
-            ['name' => 'Sem 3', 'revenue' => round($totalAmount * 0.4)],
-            ['name' => 'Sem 4', 'revenue' => round($totalAmount * 0.1)],
-        ];
+        $lastMonthRevenueStmt = $this->db->prepare("
+            SELECT SUM(amount) as amount 
+            FROM quotes 
+            WHERE provider_id = ? AND status IN ('accepted', 'signe') 
+            AND MONTH(created_at) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH) 
+            AND YEAR(created_at) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)
+        ");
+        $lastMonthRevenueStmt->execute([$providerId]);
+        $lastMonthRevenue = (float)($lastMonthRevenueStmt->fetchColumn() ?: 0);
 
-        $annualData = [
-            ['name' => 'Jan', 'revenue' => 0],
-            ['name' => 'Fév', 'revenue' => $totalAmount],
-            ['name' => 'Mar', 'revenue' => 0],
-            ['name' => 'Avr', 'revenue' => 0],
-        ];
+        $revenueGrowth = 0;
+        if ($lastMonthRevenue > 0) {
+            $revenueGrowth = round((($currentMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100);
+        } elseif ($currentMonthRevenue > 0) {
+            $revenueGrowth = 100; // 100% growth if we had nothing last month
+        }
+
+        // 4. Monthly Activity (last 6 months, specific to provider)
+        $monthlyStmt = $this->db->prepare("
+            SELECT DATE_FORMAT(l.created_at, '%Y-%m') as month_key, 
+                   COUNT(*) as count 
+            FROM leads l
+            INNER JOIN lead_assignments la ON l.id = la.lead_id
+            WHERE la.provider_id = ?
+            GROUP BY month_key 
+            ORDER BY month_key DESC 
+            LIMIT 6
+        ");
+        $monthlyStmt->execute([$providerId]);
+        $monthlyActivity = array_reverse($monthlyStmt->fetchAll(PDO::FETCH_ASSOC));
+
+        // 5. Sector Breakdown (Specific to provider)
+        $sectorStmt = $this->db->prepare("
+            SELECT l.sector, 
+                   COUNT(*) as total,
+                   SUM(CASE WHEN l.status IN ('processed', 'confirmé', 'completed') THEN 1 ELSE 0 END) as processed
+            FROM leads l
+            INNER JOIN lead_assignments la ON l.id = la.lead_id
+            WHERE la.provider_id = ?
+            GROUP BY l.sector
+            ORDER BY total DESC
+        ");
+        $sectorStmt->execute([$providerId]);
+        $sectorImpact = $sectorStmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode([
-            "totalLeads" => $leadsCount,
-            "totalQuotes" => $quotesCount,
-            "totalAmount" => $totalAmount,
-            "totalRevenue" => $totalAmount, 
+            "totalLeads" => $totalLeads, 
             "pendingLeads" => $pendingLeadsCount,
-            "revenueGrowth" => $totalAmount > 0 ? 15 : 0, 
-            "conversionRate" => $leadsCount > 0 ? round(($quotesCount / $leadsCount) * 100, 1) : 0,
-            "weeklyData" => $weeklyData,
-            "monthlyData" => $monthlyData,
-            "annualData" => $annualData
+            "closedLeads" => $closedLeads,
+            "totalQuotes" => $quotesCount,
+            "signedQuotes" => $signedQuotesCount,
+            "totalAmount" => $totalAmount,
+            "conversionRate" => $conversionRate,
+            "revenueGrowth" => $revenueGrowth,
+            "analytics" => [
+                "monthlyActivity" => $monthlyActivity,
+                "sectorImpact" => $sectorImpact
+            ]
         ]);
     }
 
@@ -259,10 +323,17 @@ class CompanyController {
                          up.email AS assigned_provider_email,
                          up.first_name AS assigned_provider_first_name,
                          up.last_name AS assigned_provider_last_name,
-                         up.company_name AS assigned_provider_company
+                         up.company_name AS assigned_provider_company,
+                         cp.first_name AS client_first_name,
+                         cp.last_name AS client_last_name,
+                         cp.phone AS client_profile_phone,
+                         cp.address AS client_profile_address,
+                         cp.city AS client_profile_city,
+                         cp.zip AS client_profile_zip
                   FROM leads l
                   LEFT JOIN lead_assignments la ON l.id = la.lead_id
                   LEFT JOIN user_profiles up ON la.provider_id = up.id
+                  LEFT JOIN user_profiles cp ON l.user_id = cp.id
                   ORDER BY l.created_at DESC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
@@ -338,7 +409,7 @@ class CompanyController {
         $stmt->execute();
         $activeSubscriptions = (int)$stmt->fetchColumn();
 
-        $stmt = $this->db->prepare("SELECT COALESCE(SUM(amount), 0) FROM quotes WHERE YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())");
+        $stmt = $this->db->prepare("SELECT COALESCE(SUM(amount), 0) FROM quotes WHERE status = 'signe' AND YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())");
         $stmt->execute();
         $monthlyRevenue = (float)$stmt->fetchColumn();
 
@@ -396,6 +467,285 @@ class CompanyController {
         }
         $this->getPlans();
     }
+
+    /**
+     * Get invoices for the authenticated provider
+     */
+    public function getInvoices() {
+        $auth = $this->authenticate();
+        $stmt = $this->invoice->readByProvider($auth['id']);
+        $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($invoices);
+    }
+
+    /**
+     * Get a single invoice for the authenticated provider
+     */
+    public function getInvoice($id) {
+        $auth = $this->authenticate();
+        $invoiceData = $this->invoice->readOne($id);
+
+        if (!$invoiceData || $invoiceData['provider_id'] !== $auth['id']) {
+            http_response_code(404);
+            echo json_encode(["error" => "Facture non trouvée."]);
+            return;
+        }
+
+        echo json_encode($invoiceData);
+    }
+
+    /**
+     * Send an invoice by email to the authenticated provider
+     */
+    public function sendInvoiceEmail($id) {
+        $auth = $this->authenticate();
+        $invoiceData = $this->invoice->readOne($id);
+
+        if (!$invoiceData || $invoiceData['provider_id'] !== $auth['id']) {
+            http_response_code(404);
+            echo json_encode(["error" => "Facture non trouvée."]);
+            return;
+        }
+
+        require_once 'utils/Mailer.php';
+        $mailer = new Mailer();
+        
+        // We use the email from the auth token or fetch from DB if needed
+        // Assuming $auth has 'email' and 'name'
+        $to_email = $auth['email'] ?? null;
+        $to_name = $auth['name'] ?? 'Prestataire';
+
+        if (!$to_email) {
+            // Fallback: fetch user details from DB
+            require_once 'models/User.php';
+            $user = new User($this->db);
+            $user->id = $auth['id'];
+            $userData = $user->readOne();
+            if ($userData) {
+                $to_email = $userData['email'];
+                $to_name = ($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '');
+            }
+        }
+
+        if (!$to_email) {
+            http_response_code(400);
+            echo json_encode(["error" => "Email du destinataire introuvable."]);
+            return;
+        }
+
+        if ($mailer->sendInvoiceEmail($to_email, trim($to_name), $invoiceData)) {
+            echo json_encode(["message" => "La facture a été envoyée par email avec succès."]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["error" => "Erreur lors de l'envoi de l'email."]);
+        }
+    }
+
+    /**
+     * Get dashboard stats for the authenticated client
+     */
+    public function getClientDashboardStats() {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        // Active requests (status = pending/assigned)
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM leads WHERE user_id = ? AND status IN ('pending', 'assigned')");
+        $stmt->execute([$auth['id']]);
+        $activeRequests = $stmt->fetchColumn();
+
+        // Pending quotes
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM quotes q 
+                                   INNER JOIN leads l ON q.lead_id = l.id 
+                                   WHERE l.user_id = ? AND q.status = 'attente_client'");
+        $stmt->execute([$auth['id']]);
+        $pendingQuotes = $stmt->fetchColumn();
+
+        // Completed interventions
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM leads WHERE user_id = ? AND status = 'completed'");
+        $stmt->execute([$auth['id']]);
+        $completedInterventions = $stmt->fetchColumn();
+
+        echo json_encode([
+            "active_requests" => $activeRequests,
+            "pending_quotes" => $pendingQuotes,
+            "completed_interventions" => $completedInterventions
+        ]);
+    }
+
+    /**
+     * Delete client account and all related data (GDPR Control)
+     */
+    public function deleteClientAccount() {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        $this->db->beginTransaction();
+        try {
+            // Delete user profile (cascades to leads and quotes if FKs are set correctly)
+            // Manual step just in case FKs are not restrictive/cascading
+            $stmt = $this->db->prepare("DELETE FROM leads WHERE user_id = ?");
+            $stmt->execute([$auth['id']]);
+
+            $stmt = $this->db->prepare("DELETE FROM user_profiles WHERE id = ?");
+            $stmt->execute([$auth['id']]);
+            
+            $this->db->commit();
+            echo json_encode(["message" => "Compte et données supprimés définitivement."]);
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            http_response_code(500);
+            echo json_encode(["error" => "Erreur lors de la suppression du compte: " . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Export all data related to the client (GDPR Portability)
+     */
+    public function exportClientData() {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        try {
+            // 1. Profile
+            $stmt = $this->db->prepare("SELECT id, email, first_name, last_name, phone, role, created_at FROM user_profiles WHERE id = ?");
+            $stmt->execute([$auth['id']]);
+            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // 2. Leads (Requests)
+            $stmt = $this->db->prepare("SELECT id, name, phone, email, sector, need, time_slot, status, address, created_at FROM leads WHERE user_id = ?");
+            $stmt->execute([$auth['id']]);
+            $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Quotes related to those leads
+            $quotes = [];
+            if (!empty($leads)) {
+                $leadIds = array_column($leads, 'id');
+                $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
+                $stmt = $this->db->prepare("SELECT id, lead_id, provider_id, client_name, project_name, amount, status, created_at FROM quotes WHERE lead_id IN ($placeholders)");
+                $stmt->execute($leadIds);
+                $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            $export = [
+                "generated_at" => date('Y-m-d H:i:s'),
+                "profile" => $profile,
+                "leads" => $leads,
+                "quotes" => $quotes
+            ];
+
+            echo json_encode($export);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["error" => "Erreur lors de l'export des données: " . $e->getMessage()]);
+        }
+    }
+
+    public function getClientQuotes() {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        $stmt = $this->quote->readByClient($auth['id']);
+        $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($quotes);
+    }
+
+    public function acceptQuote($id) {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        $this->quote->id = $id;
+        // Verify quote belongs to client
+        $stmt = $this->quote->readByClient($auth['id']);
+        $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $owned = false;
+        foreach($quotes as $q) {
+            if ($q['id'] === $id) {
+                $owned = true;
+                break;
+            }
+        }
+
+        if (!$owned) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Devis non trouvé']);
+            return;
+        }
+
+        // Update status to 'signe'
+        $query = "UPDATE quotes SET status = 'signe' WHERE id = ?";
+        $stmt = $this->db->prepare($query);
+        if ($stmt->execute([$id])) {
+            // Also update lead status to confirmed
+            $quoteData = $this->db->prepare("SELECT lead_id FROM quotes WHERE id = ?");
+            $quoteData->execute([$id]);
+            $leadId = $quoteData->fetchColumn();
+            if ($leadId) {
+                $updLead = $this->db->prepare("UPDATE leads SET status = 'confirmé' WHERE id = ?");
+                $updLead->execute([$leadId]);
+            }
+            echo json_encode(["message" => "Devis accepté avec succès"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["error" => "Erreur lors de l'acceptation"]);
+        }
+    }
+
+    public function refuseQuote($id) {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        // Similar verification as acceptQuote
+        $this->quote->id = $id;
+        $stmt = $this->quote->readByClient($auth['id']);
+        $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $owned = false;
+        foreach($quotes as $q) {
+            if ($q['id'] === $id) {
+                $owned = true;
+                break;
+            }
+        }
+
+        if (!$owned) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Devis non trouvé']);
+            return;
+        }
+
+        $query = "UPDATE quotes SET status = 'refuse' WHERE id = ?";
+        $stmt = $this->db->prepare($query);
+        if ($stmt->execute([$id])) {
+            echo json_encode(["message" => "Devis refusé"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["error" => "Erreur lors du refus"]);
+        }
+    }
+
 
     /**
      * Admin: create pricing plan
@@ -574,12 +924,40 @@ class CompanyController {
                                            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
                                            ORDER BY month_label ASC");
         $monthlyStmt->execute();
+        $monthlyRaw = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $demandStmt = $this->db->prepare("SELECT COALESCE(NULLIF(TRIM(sector), ''), 'Non renseigne') AS sector, COUNT(*) AS demand
+        // Fill gaps for the last 12 months
+        $monthlySeries = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $monthDate = new DateTime();
+            $monthDate->modify("-$i months");
+            $label = $monthDate->format('Y-m');
+            
+            $found = false;
+            foreach ($monthlyRaw as $row) {
+                if ($row['month_label'] === $label) {
+                    $monthlySeries[] = $row;
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $monthlySeries[] = ['month_label' => $label, 'leads_count' => 0];
+            }
+        }
+
+        $demandStmt = $this->db->prepare("SELECT COALESCE(NULLIF(TRIM(sector), ''), 'Non renseigne') AS sector, 
+                                                 COUNT(*) AS demand,
+                                                 SUM(CASE WHEN status IN ('processed', 'confirmé', 'closed') THEN 1 ELSE 0 END) as processed
                                           FROM leads
                                           GROUP BY COALESCE(NULLIF(TRIM(sector), ''), 'Non renseigne')
                                           ORDER BY demand DESC");
         $demandStmt->execute();
+
+        // Status Distribution (Global)
+        $distStmt = $this->db->prepare("SELECT status, COUNT(*) as count FROM leads GROUP BY status");
+        $distStmt->execute();
+        $distribution = $distStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $providersStmt = $this->db->prepare("SELECT id, email, first_name, last_name, company_name, subscription_status, sectors
                                              FROM user_profiles
@@ -617,8 +995,9 @@ class CompanyController {
             "leads_month" => $leadsMonth,
             "daily_series" => $dailyStmt->fetchAll(PDO::FETCH_ASSOC),
             "weekly_series" => $weeklyStmt->fetchAll(PDO::FETCH_ASSOC),
-            "monthly_series" => $monthlyStmt->fetchAll(PDO::FETCH_ASSOC),
+            "monthly_series" => $monthlySeries,
             "sector_demand" => $demandStmt->fetchAll(PDO::FETCH_ASSOC),
+            "distribution" => $distribution,
             "providers" => $providers,
         ]);
     }
@@ -693,16 +1072,16 @@ class CompanyController {
             return;
         }
 
-        $providersStmt = $this->db->prepare("SELECT id, email, first_name, last_name, company_name, is_verified, subscription_status, sectors
+        $providersStmt = $this->db->prepare("SELECT id, email, first_name, last_name, company_name, is_verified, subscription_status, sectors, lead_credits
                                              FROM user_profiles
-                                             WHERE role = 'provider' AND subscription_status = 'active' AND is_verified = 1
+                                             WHERE role = 'provider' AND subscription_status = 'active' AND is_verified = 1 AND lead_credits > 0
                                              ORDER BY created_at ASC");
         $providersStmt->execute();
         $providers = $providersStmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($providers)) {
             http_response_code(400);
-            echo json_encode(["error" => "Aucun prestataire actif et qualifié n'est disponible pour le dispatch."]);
+            echo json_encode(["error" => "Aucun prestataire actif avec des crédits n'est disponible pour le dispatch."]);
             return;
         }
 
@@ -724,6 +1103,7 @@ class CompanyController {
 
         $insertAssignment = $this->db->prepare("INSERT INTO lead_assignments (id, lead_id, provider_id, created_at) VALUES (?, ?, ?, NOW())");
         $updateLeadStatus = $this->db->prepare("UPDATE leads SET status = 'assigned' WHERE id = ?");
+        $deductCredit = $this->db->prepare("UPDATE user_profiles SET lead_credits = lead_credits - 1 WHERE id = ? AND lead_credits > 0");
 
         $sectorDemandCounts = [];
         foreach ($pendingLeads as $pendingLead) {
@@ -752,12 +1132,15 @@ class CompanyController {
                 $providerSectors = array_map(function ($sector) {
                     return strtolower(trim((string)$sector));
                 }, $provider['sectors_list'] ?? []);
-                if ($leadSectorLower !== '' && in_array($leadSectorLower, $providerSectors, true)) {
+                
+                // Only consider providers with credits left in their cached load
+                $currentCredits = (int)$provider['lead_credits'] - ($providerLoad[$provider['id']] - $this->getInitialLoad($provider['id'], $providerLoad)); // Simplified check
+                
+                if ($leadSectorLower !== '' && in_array($leadSectorLower, $providerSectors, true) && $provider['lead_credits'] > 0) {
                     $matchingProviders[] = $provider;
                 }
             }
 
-            // We MUST only assign leads to providers that match the sector. No fallback.
             if (empty($matchingProviders)) {
                 continue;
             }
@@ -768,6 +1151,10 @@ class CompanyController {
 
             foreach ($candidateProviders as $candidate) {
                 $providerId = $candidate['id'];
+                
+                // Double check if provider still has credits (could be exhausted during this loop)
+                if ($candidate['lead_credits'] <= 0) continue;
+
                 if (!isset($providerSectorLoad[$providerId][$leadSectorLower])) {
                     if ($leadSector !== '') {
                         $providerSectorCountStmt->execute([$providerId, $leadSector]);
@@ -780,7 +1167,6 @@ class CompanyController {
                 $totalAssigned = $providerLoad[$providerId] ?? 0;
                 $sectorAssigned = $providerSectorLoad[$providerId][$leadSectorLower] ?? 0;
 
-                // Lower score is better: simple load balancing math.
                 $score = ($totalAssigned * 2) + $sectorAssigned;
                 if ($score < $bestScore) {
                     $bestScore = $score;
@@ -792,21 +1178,43 @@ class CompanyController {
                 continue;
             }
 
-            $assignmentId = $this->generateUuid();
-            $providerId = $bestProvider['id'];
-            if ($insertAssignment->execute([$assignmentId, $leadId, $providerId])) {
-                $updateLeadStatus->execute([$leadId]);
-                $providerLoad[$providerId] = ($providerLoad[$providerId] ?? 0) + 1;
-                $providerSectorLoad[$providerId][$leadSectorLower] = ($providerSectorLoad[$providerId][$leadSectorLower] ?? 0) + 1;
+            $this->db->beginTransaction();
+            try {
+                $assignmentId = $this->generateUuid();
+                $providerId = $bestProvider['id'];
+                
+                if ($insertAssignment->execute([$assignmentId, $leadId, $providerId])) {
+                    if ($deductCredit->execute([$providerId])) {
+                        $updateLeadStatus->execute([$leadId]);
+                        $this->db->commit();
+                        
+                        $providerLoad[$providerId] = ($providerLoad[$providerId] ?? 0) + 1;
+                        $providerSectorLoad[$providerId][$leadSectorLower] = ($providerSectorLoad[$providerId][$leadSectorLower] ?? 0) + 1;
+                        
+                        // Update credits in local provider object to prevent over-assignment
+                        foreach ($providers as &$p) {
+                            if ($p['id'] === $providerId) {
+                                $p['lead_credits']--;
+                                break;
+                            }
+                        }
 
-                $assignments[] = [
-                    "lead_id" => $leadId,
-                    "lead_sector" => $leadSector,
-                    "provider_id" => $providerId,
-                    "provider_name" => trim((string)(($bestProvider['first_name'] ?? '') . ' ' . ($bestProvider['last_name'] ?? ''))),
-                    "provider_email" => $bestProvider['email'] ?? '',
-                    "matching_type" => !empty($matchingProviders) ? "niche_match" : "load_balance_fallback"
-                ];
+                        $assignments[] = [
+                            "lead_id" => $leadId,
+                            "lead_sector" => $leadSector,
+                            "provider_id" => $providerId,
+                            "provider_name" => trim((string)(($bestProvider['first_name'] ?? '') . ' ' . ($bestProvider['last_name'] ?? ''))),
+                            "provider_email" => $bestProvider['email'] ?? "",
+                            "matching_type" => "niche_match"
+                        ];
+                    } else {
+                        $this->db->rollBack();
+                    }
+                } else {
+                    $this->db->rollBack();
+                }
+            } catch (Exception $e) {
+                $this->db->rollBack();
             }
         }
 
@@ -815,6 +1223,10 @@ class CompanyController {
             "assigned_count" => count($assignments),
             "assignments" => $assignments
         ]);
+    }
+
+    private function getInitialLoad($providerId, $providerLoad) {
+        return $providerLoad[$providerId] ?? 0;
     }
 
     /**
@@ -1213,15 +1625,149 @@ class CompanyController {
         echo json_encode(["message" => "Devis supprime."]);
     }
     /**
-     * Stripe Checkout Session Placeholder
+     * Create a Stripe Checkout Session
      */
     public function createCheckout() {
-        $this->authenticate();
-        // Placeholder implementation
-        echo json_encode([
-            "id" => "cs_test_" . uniqid(),
-            "url" => "https://checkout.stripe.com/pay/placeholder"
-        ]);
+        $auth = $this->authenticate();
+        
+        // Get JSON input
+        $data = json_decode(file_get_contents("php://input"), true);
+        $planId = $data['plan_id'] ?? '';
+
+        if (!$planId) {
+            http_response_code(400);
+            echo json_encode(["error" => "ID du plan manquant."]);
+            return;
+        }
+
+        // Fetch plan details from DB
+        $query = "SELECT name, price, stripe_price_id, max_leads FROM subscription_plans WHERE id = ? LIMIT 1";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(1, $planId);
+        $stmt->execute();
+        $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$plan) {
+            http_response_code(404);
+            echo json_encode(["error" => "Plan introuvable."]);
+            return;
+        }
+
+        $stripeSecret = $_ENV['STRIPE_SECRET_KEY'] ?? '';
+        if (!$stripeSecret) {
+            http_response_code(500);
+            echo json_encode(["error" => "Configuration Stripe (Secret Key) manquante dans le fichier .env."]);
+            return;
+        }
+
+        // Build Stripe-compatible HTTP POST body (no nested http_build_query)
+        // Use product ID in price_data to link to the existing Stripe product
+        $baseUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/rappel/public/pro';
+        $successUrl = $baseUrl . '/pricing.php?success=true&session_id={CHECKOUT_SESSION_ID}';
+        $cancelUrl  = $baseUrl . '/pricing.php?canceled=true';
+
+        $postParams = [
+            'payment_method_types[0]'                           => 'card',
+            'line_items[0][price_data][currency]'               => 'eur',
+            'line_items[0][price_data][product]'                => $plan['stripe_price_id'],
+            'line_items[0][price_data][unit_amount]'            => (int)($plan['price'] * 100),
+            'line_items[0][price_data][recurring][interval]'    => 'month',
+            'line_items[0][quantity]'                           => 1,
+            'mode'                                              => 'subscription',
+            'success_url'                                       => $successUrl,
+            'cancel_url'                                        => $cancelUrl,
+            'customer_email'                                    => $auth['email'] ?? '',
+            'client_reference_id'                               => $auth['id'],
+            'metadata[user_id]'                                 => $auth['id'],
+            'metadata[plan_id]'                                 => $planId,
+            'metadata[plan_name]'                               => $plan['name'],
+            'metadata[max_leads]'                               => (string)($plan['max_leads'] ?? 0),
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/checkout/sessions');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postParams));
+        curl_setopt($ch, CURLOPT_USERPWD, $stripeSecret . ':');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 400) {
+            http_response_code($httpCode);
+            echo $result;
+            return;
+        }
+
+        echo $result;
+    }
+
+    /**
+     * Handle Stripe Webhook
+     */
+    public function handleWebhook() {
+        $payload = file_get_contents('php://input');
+        $data = json_decode($payload, true);
+
+        if (!$data || !isset($data['type'])) {
+            http_response_code(400);
+            echo json_encode(["error" => "Payload invalide"]);
+            return;
+        }
+
+        // Log the event for debugging
+        file_put_contents(__DIR__ . '/stripe_webhooks.log', date('[Y-m-d H:i:s] ') . $data['type'] . "\n", FILE_APPEND);
+
+        if ($data['type'] === 'checkout.session.completed') {
+            $session = $data['data']['object'];
+            $metadata = $session['metadata'] ?? [];
+            $userId = $metadata['user_id'] ?? $session['client_reference_id'] ?? '';
+            $planId = $metadata['plan_id'] ?? '';
+            $maxLeads = (int)($metadata['max_leads'] ?? 0);
+
+            if ($userId && $planId) {
+                try {
+                    $this->db->beginTransaction();
+
+                    // 1. Update user profile
+                    $updateQuery = "UPDATE user_profiles 
+                                   SET plan_id = ?, 
+                                       subscription_status = 'active', 
+                                       lead_credits = lead_credits + ? 
+                                   WHERE id = ?";
+                    $stmt = $this->db->prepare($updateQuery);
+                    $stmt->execute([$planId, $maxLeads, $userId]);
+
+                    // 2. Create invoice record using the model
+                    $this->invoice->provider_id = $userId;
+                    $this->invoice->invoice_number = 'INV-' . strtoupper(substr(uniqid(), -8));
+                    $this->invoice->amount = (float)($session['amount_total'] / 100);
+                    $this->invoice->currency = strtoupper($session['currency'] ?? 'EUR');
+                    $this->invoice->stripe_session_id = $session['id'] ?? null;
+                    $this->invoice->stripe_payment_id = $session['payment_intent'] ?? null;
+                    $this->invoice->stripe_customer_id = $session['customer'] ?? null;
+                    $this->invoice->status = 'paid';
+                    
+                    if (!$this->invoice->create()) {
+                        throw new Exception("Erreur lors de la création de la facture.");
+                    }
+
+                    $this->db->commit();
+                    echo json_encode(["status" => "success", "message" => "Compte mis à jour."]);
+                } catch (Exception $e) {
+                    $this->db->rollBack();
+                    http_response_code(500);
+                    echo json_encode(["error" => $e->getMessage()]);
+                }
+            } else {
+                echo json_encode(["status" => "ignored", "message" => "Metadata manquante."]);
+            }
+        } else {
+            echo json_encode(["status" => "ignored", "message" => "Evenement non géré."]);
+        }
     }
 
     private function generateUuid() {

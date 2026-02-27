@@ -5,5 +5,6 @@ $user = getCurrentUser();
 $isAdmin = ($user['role'] ?? '') === 'admin';
 
 clearSession();
-header('Location: ' . ($isAdmin ? '/rappel/public/' : '/rappel/public/pro/login.php'));
+// Redirection logic: All users go to home except specifically handled roles if needed
+header('Location: /rappel/public/');
 exit;

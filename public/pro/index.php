@@ -100,7 +100,7 @@ $pageTitle = 'Espace Expert';
                         </li>
                         <?php endforeach; ?>
                     </ul>
-                    <a href="/rappel/public/pro/checkout.php?plan=croissance" class="btn btn-outline w-full rounded-xl border-navy-200 text-center">Sélectionner</a>
+                    <a href="#" onclick="selectPlan('croissance'); return false;" class="btn btn-outline w-full rounded-xl border-navy-200 text-center">Sélectionner</a>
                 </div>
 
                 <!-- Accélération (Popular) -->
@@ -124,7 +124,7 @@ $pageTitle = 'Espace Expert';
                         </li>
                         <?php endforeach; ?>
                     </ul>
-                    <a href="/rappel/public/pro/checkout.php?plan=acceleration" class="btn btn-accent w-full rounded-xl shadow-premium text-center">Choisir l'Excellence</a>
+                    <a href="#" onclick="selectPlan('acceleration'); return false;" class="btn btn-accent w-full rounded-xl shadow-premium text-center">Choisir l'Excellence</a>
                 </div>
 
                 <!-- Flexibilité -->
@@ -145,7 +145,7 @@ $pageTitle = 'Espace Expert';
                         </li>
                         <?php endforeach; ?>
                     </ul>
-                    <a href="/rappel/public/pro/checkout.php?plan=flexibilite" class="btn btn-outline w-full rounded-xl border-navy-200 text-center">Commander</a>
+                    <a href="#" onclick="selectPlan('flexibilite'); return false;" class="btn btn-outline w-full rounded-xl border-navy-200 text-center">Commander</a>
                 </div>
             </div>
         </div>
@@ -206,7 +206,26 @@ $pageTitle = 'Espace Expert';
     </footer>
 </div>
 
-<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });</script>
+<script src="/rappel/public/assets/js/app.js?v=3.1"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+
+let _landingPlans = [];
+(async () => {
+    try {
+        const res = await fetch('/rappel/api/plans', { headers: { 'Accept': 'application/json' } });
+        if (res.ok) _landingPlans = await res.json();
+    } catch(e) {}
+})();
+
+function selectPlan(name) {
+    const token = sessionStorage.getItem('rappel_token') || '';
+    if (token) {
+        window.location.href = '/rappel/public/pro/pricing.php?select=' + encodeURIComponent(name);
+    } else {
+        window.location.href = '/rappel/public/pro/signup.php?intent=' + encodeURIComponent(name);
+    }
+}
+</script>
 </body>
 </html>

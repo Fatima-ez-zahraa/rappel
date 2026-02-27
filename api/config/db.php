@@ -6,7 +6,7 @@ class Database
     private $host = "127.0.0.1";
     private $username = "root";
     private $password = "";
-    private $port = "3307"; 
+    private $port = "3308"; 
     public $conn;
 
     public function getConnection()
@@ -16,7 +16,7 @@ class Database
 
         if (empty($this->db_name)) {
              http_response_code(500);
-             echo json_encode(["error" => "Configuration de la base de données manquante."]);
+             echo json_encode(["status"=>"error", "message" => "Configuration de la base de données manquante."]);
              exit();
         }
 
@@ -27,7 +27,7 @@ class Database
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch (PDOException $exception) {
             http_response_code(500);
-            echo json_encode(["error" => "Erreur de connexion à la base de données: " . $exception->getMessage()]);
+            echo json_encode(["status"=>"error", "message" => "Erreur de connexion à la base de données ($this->host:$this->port): " . $exception->getMessage()]);
             exit();
         }
 

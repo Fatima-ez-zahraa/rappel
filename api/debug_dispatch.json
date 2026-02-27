@@ -1,0 +1,45 @@
+{
+    "providers": [
+        {
+            "id": "1ebf2b57-44c8-4095-8613-fbc1fce34079",
+            "email": "hicham@ycndev.com",
+            "is_verified": "1",
+            "subscription_status": "active",
+            "lead_credits": "9",
+            "sectors": "[\"garage\",\"renovation\"]"
+        },
+        {
+            "id": "38969070-6741-4f2d-b0dd-b76cf4b3956c",
+            "email": "adnane@ycndev.com",
+            "is_verified": "1",
+            "subscription_status": "active",
+            "lead_credits": "8",
+            "sectors": "[\"finance\",\"assurance\"]"
+        },
+        {
+            "id": "5cabdddf-53f2-4215-8c47-705eb26fc10b",
+            "email": "yassir@ycndev.com",
+            "is_verified": "1",
+            "subscription_status": "active",
+            "lead_credits": "10",
+            "sectors": "[\"assurance\",\"banque\"]"
+        },
+        {
+            "id": "c7f18aee-f14b-483a-8792-4967de52cf77",
+            "email": "mouad@ycndev.com",
+            "is_verified": "1",
+            "subscription_status": "active",
+            "lead_credits": "10",
+            "sectors": "[\"renovation\",\"energie\"]"
+        },
+        {
+            "id": "d1fbcb16-2983-4975-bd45-7401ca7f6e5b",
+            "email": "fatimaezahra@ycndev.com",
+            "is_verified": "1",
+            "subscription_status": "active",
+            "lead_credits": "10",
+            "sectors": "[\"garage\",\"finance\"]"
+        }
+    ],
+    "unassigned_leads": []
+}

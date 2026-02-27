@@ -81,6 +81,11 @@ $token = getToken();
         </div>
         <form onsubmit="handleCreateQuote(event)" class="p-6 space-y-4">
             <div>
+                <label class="form-label">Lead associé (Optionnel)</label>
+                <select id="q-lead-select" class="form-select mb-2" onchange="onLeadSelectChange('q')">
+                    <option value="">-- Sélectionner un lead --</option>
+                </select>
+                <p class="text-[9px] text-navy-400 font-bold uppercase tracking-widest px-1 mb-2">Ou saisir manuellement :</p>
                 <label class="form-label">Client *</label>
                 <input type="text" id="q-client" class="form-input" placeholder="Nom du client" required>
             </div>
@@ -125,6 +130,11 @@ $token = getToken();
         <form onsubmit="handleEditQuote(event)" class="p-6 space-y-4">
             <input type="hidden" id="eq-id">
             <div>
+                <label class="form-label">Lead associé (Optionnel)</label>
+                <select id="eq-lead-select" class="form-select mb-2" onchange="onLeadSelectChange('eq')">
+                    <option value="">-- Sélectionner un lead --</option>
+                </select>
+                <p class="text-[9px] text-navy-400 font-bold uppercase tracking-widest px-1 mb-2">Ou modifier manuellement :</p>
                 <label class="form-label">Client *</label>
                 <input type="text" id="eq-client" class="form-input" placeholder="Nom du client" required>
             </div>
@@ -159,9 +169,9 @@ $token = getToken();
 
 <?php
 $safeToken = addslashes($token ?? '');
-$extraScript = <<<'JS'
+?>
 <script>
-const PHP_TOKEN = '__PHP_TOKEN__';
+const PHP_TOKEN = '<?php echo $safeToken; ?>';
 
 const statusColors = {
     draft: 'bg-navy-50 text-navy-600',
@@ -206,8 +216,11 @@ function escapeHtml(value) {
 async function loadQuotes() {
     if (PHP_TOKEN) Auth.setToken(PHP_TOKEN);
     try {
-        const data = await apiFetch('/quotes');
-        state.quotes = Array.isArray(data) ? data : [];
+        const [quotesData] = await Promise.all([
+            apiFetch('/quotes'),
+            loadLeads()
+        ]);
+        state.quotes = Array.isArray(quotesData) ? quotesData : [];
         refreshQuotesUI();
     } catch (err) {
         document.getElementById('quotes-container').innerHTML = `<div class="form-error">${escapeHtml(err.message)}</div>`;
@@ -297,7 +310,10 @@ function renderQuotes(quotes) {
 
     container.innerHTML = `<div class="space-y-3">${quotes.map((q) => {
         const status = normalizeStatus(q.status);
-        const client = escapeHtml(q.client_name || q.client || 'Client');
+        const hasProfile = !!q.client_first_name;
+        const displayName = hasProfile ? `${q.client_first_name} ${q.client_last_name || ''}`.trim() : (q.client_name || q.client || 'Client');
+        const client = escapeHtml(displayName);
+        const lead = q.lead_id ? allLeads.find(l => String(l.id) === String(q.lead_id)) : null;
         const description = escapeHtml(q.project_name || q.description || '');
         const createdAt = new Date(q.created_at || Date.now()).toLocaleDateString('fr-FR');
         const amount = formatAmount(q.amount || 0);
@@ -309,6 +325,8 @@ function renderQuotes(quotes) {
             <div class="flex-1 min-w-0">
                 <div class="flex items-center flex-wrap gap-2 mb-2">
                     <h3 class="font-bold text-navy-950 truncate">${client}</h3>
+                    ${hasProfile ? '<span class="px-2 py-0.5 rounded-lg bg-accent-500/10 text-accent-500 text-[8px] font-black uppercase tracking-widest border border-accent-500/20">Client Inscrit</span>' : ''}
+                    ${lead ? `<span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-blue-100">Lead: ${escapeHtml(lead.name)}</span>` : ''}
                     <span class="badge ${statusColor}">${label}</span>
                 </div>
                 <p class="text-sm text-navy-500 font-medium ${description ? '' : 'italic'}">${description || 'Aucune description'}</p>
@@ -346,6 +364,10 @@ function openCreateQuote() {
     const modal = document.getElementById('quote-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    document.getElementById('q-lead-select').value = '';
+    document.getElementById('q-client').value = '';
+    document.getElementById('q-amount').value = '';
+    document.getElementById('q-desc').value = '';
     document.getElementById('q-client').focus();
 }
 
@@ -361,12 +383,13 @@ function openEditQuote(id) {
     if (!quote) return;
 
     document.getElementById('eq-id').value = quote.id || '';
+    document.getElementById('eq-lead-select').value = quote.lead_id || '';
     document.getElementById('eq-client').value = quote.client_name || quote.client || '';
     document.getElementById('eq-amount').value = quote.amount || '';
     document.getElementById('eq-status').value = normalizeStatus(quote.status) || 'attente_client';
     document.getElementById('eq-project').value = quote.project_name || '';
     document.getElementById('eq-form-error').classList.add('hidden');
-
+    
     const modal = document.getElementById('edit-quote-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -387,6 +410,7 @@ async function handleCreateQuote(e) {
     formError.classList.add('hidden');
 
     const clientName = document.getElementById('q-client').value.trim();
+    const leadId = document.getElementById('q-lead-select').value;
     const amountRaw = document.getElementById('q-amount').value;
     const amount = parseFloat(amountRaw);
     const status = document.getElementById('q-status').value;
@@ -409,6 +433,7 @@ async function handleCreateQuote(e) {
             method: 'POST',
             body: JSON.stringify({
                 client_name: clientName,
+                lead_id: leadId || null,
                 amount: amount,
                 status: status,
                 project_name: description,
@@ -420,6 +445,7 @@ async function handleCreateQuote(e) {
         document.getElementById('q-amount').value = '';
         document.getElementById('q-status').value = 'attente_client';
         document.getElementById('q-desc').value = '';
+        document.getElementById('q-lead-select').value = ''; // Reset lead select
         closeCreateQuote();
         await loadQuotes();
         showToast('Devis cree avec succes.', 'success');
@@ -440,6 +466,7 @@ async function handleEditQuote(e) {
 
     const id = document.getElementById('eq-id').value.trim();
     const clientName = document.getElementById('eq-client').value.trim();
+    const leadId = document.getElementById('eq-lead-select').value;
     const amountRaw = document.getElementById('eq-amount').value;
     const amount = parseFloat(amountRaw);
     const status = document.getElementById('eq-status').value;
@@ -467,6 +494,7 @@ async function handleEditQuote(e) {
             method: 'PATCH',
             body: JSON.stringify({
                 client_name: clientName,
+                lead_id: leadId || null,
                 amount: amount,
                 status: status,
                 project_name: projectName,
@@ -516,16 +544,69 @@ function bindQuotesEvents() {
             closeEditQuote();
         }
     });
+
+    document.getElementById('q-lead-select').addEventListener('change', () => onLeadSelectChange('q'));
+    document.getElementById('eq-lead-select').addEventListener('change', () => onLeadSelectChange('eq'));
+}
+
+let allLeads = [];
+
+async function loadLeads() {
+    try {
+        const data = await apiFetch('/leads');
+        allLeads = Array.isArray(data) ? data : [];
+        populateLeadSelects();
+    } catch (err) {
+        console.error('Failed to load leads:', err);
+    }
+}
+
+function populateLeadSelects() {
+    const selects = ['q-lead-select', 'eq-lead-select'];
+    selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        const currentValue = el.value;
+        el.innerHTML = '<option value="">-- Sélectionner un lead --</option>' + 
+            allLeads.map(l => `<option value="${l.id}">${l.name} (${l.sector || 'Sans secteur'})</option>`).join('');
+        el.value = currentValue;
+    });
+}
+
+function onLeadSelectChange(prefix) {
+    const select = document.getElementById(`${prefix}-lead-select`);
+    const clientInput = document.getElementById(`${prefix}-client`);
+    const projectInput = document.getElementById(prefix === 'q' ? 'q-desc' : 'eq-project');
+    
+    if (!select || !clientInput) return;
+    
+    const leadId = select.value;
+    if (!leadId) return;
+    
+    const lead = allLeads.find(l => String(l.id) === String(leadId));
+    if (lead) {
+        if (!clientInput.value.trim()) {
+            clientInput.value = lead.name;
+        }
+        if (projectInput && !projectInput.value.trim()) {
+            projectInput.value = lead.need || '';
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const params = new URLSearchParams(window.location.search);
+    const search = params.get('search');
+    if (search) {
+        state.query = search;
+        const input = document.getElementById('q-search');
+        if (input) input.value = search;
+    }
+    
     bindQuotesEvents();
     if (typeof lucide !== 'undefined') lucide.createIcons();
     await loadQuotes();
 });
 </script>
-JS;
-$extraScript = str_replace('__PHP_TOKEN__', $safeToken, $extraScript);
-?>
-
 <?php include __DIR__ . '/../includes/dashboard_layout_bottom.php'; ?>

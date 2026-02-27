@@ -38,11 +38,17 @@ $pageTitle = 'Accueil';
                 <div class="flex flex-wrap gap-5">
                     <button onclick="document.getElementById('demande').scrollIntoView({behavior:'smooth'})"
                             class="btn btn-primary btn-lg rounded-[2rem] px-10 flex items-center gap-2">
-                        Commencer
+                        Commencer ma demande
                         <i data-lucide="arrow-right" style="width:20px;height:20px;"></i>
                     </button>
+                    <!-- <?php if (!isLoggedIn()): ?>
+                        <a href="/rappel/public/client/login.php"
+                           class="btn btn-outline btn-lg rounded-[2rem] px-10">
+                            Se connecter
+                        </a>
+                    <?php endif; ?> -->
                     <a href="/rappel/public/pro/"
-                       class="btn btn-outline btn-lg rounded-[2rem] px-10">
+                       class="btn btn-outline btn-lg rounded-[2rem] px-10 border-navy-100 text-navy-400 hover:border-brand-500 hover:text-brand-600 transition-all">
                         Espace Pro
                     </a>
                 </div>
@@ -250,14 +256,14 @@ $pageTitle = 'Accueil';
                             <div class="space-y-1.5">
                                 <label class="text-[11px] font-bold text-navy-400 uppercase tracking-wider">Prénom</label>
                                 <div class="relative">
-                                    <i data-lucide="user" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" style="width:16px;height:16px;"></i>
+                                    <i data-lucide="user" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300 pointer-events-none" style="width:16px;height:16px;"></i>
                                     <input type="text" id="lead-firstname" class="form-input pl-10 rounded-xl bg-navy-50/60 border-navy-100 focus:bg-white" placeholder="Jean">
                                 </div>
                             </div>
                             <div class="space-y-1.5">
                                 <label class="text-[11px] font-bold text-navy-400 uppercase tracking-wider">Nom</label>
                                 <div class="relative">
-                                    <i data-lucide="user" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" style="width:16px;height:16px;"></i>
+                                    <i data-lucide="user" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300 pointer-events-none" style="width:16px;height:16px;"></i>
                                     <input type="text" id="lead-lastname" class="form-input pl-10 rounded-xl bg-navy-50/60 border-navy-100 focus:bg-white" placeholder="Dupont">
                                 </div>
                             </div>
@@ -266,7 +272,7 @@ $pageTitle = 'Accueil';
                         <div class="space-y-1.5">
                             <label class="text-[11px] font-bold text-navy-400 uppercase tracking-wider">Téléphone <span class="text-red-400">*</span></label>
                             <div class="relative">
-                                <i data-lucide="phone" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" style="width:16px;height:16px;"></i>
+                                <i data-lucide="phone" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300 pointer-events-none" style="width:16px;height:16px;"></i>
                                 <input type="tel" id="lead-phone" class="form-input pl-10 rounded-xl bg-navy-50/60 border-navy-100 focus:bg-white" placeholder="06 12 34 56 78">
                             </div>
                         </div>
@@ -274,16 +280,25 @@ $pageTitle = 'Accueil';
                         <div class="space-y-1.5">
                             <label class="text-[11px] font-bold text-navy-400 uppercase tracking-wider">Email <span class="text-red-400">*</span></label>
                             <div class="relative">
-                                <i data-lucide="mail" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" style="width:16px;height:16px;"></i>
+                                <i data-lucide="mail" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300 pointer-events-none" style="width:16px;height:16px;"></i>
                                 <input type="email" id="lead-email" class="form-input pl-10 rounded-xl bg-navy-50/60 border-navy-100 focus:bg-white" placeholder="jean@exemple.com">
                             </div>
                         </div>
 
-                        <div class="space-y-1.5">
-                            <label class="text-[11px] font-bold text-navy-400 uppercase tracking-wider">Code Postal</label>
-                            <div class="relative">
-                                <i data-lucide="map-pin" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" style="width:16px;height:16px;"></i>
-                                <input type="text" id="lead-zip" class="form-input pl-10 rounded-xl bg-navy-50/60 border-navy-100 focus:bg-white" placeholder="75001" maxlength="5">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1.5">
+                                <label class="text-[11px] font-bold text-navy-400 uppercase tracking-wider">Code Postal</label>
+                                <div class="relative">
+                                    <i data-lucide="map-pin" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300 pointer-events-none" style="width:16px;height:16px;"></i>
+                                    <input type="text" id="lead-zip" class="form-input pl-10 rounded-xl bg-navy-50/60 border-navy-100 focus:bg-white" placeholder="75001" maxlength="5">
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-[11px] font-bold text-navy-400 uppercase tracking-wider">Ville</label>
+                                <div class="relative">
+                                    <i data-lucide="building" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300 pointer-events-none" style="width:16px;height:16px;"></i>
+                                    <input type="text" id="lead-city" class="form-input pl-10 rounded-xl bg-navy-50/60 border-navy-100 focus:bg-white" placeholder="Paris">
+                                </div>
                             </div>
                         </div>
 
@@ -348,14 +363,22 @@ $pageTitle = 'Accueil';
                             <h4 class="text-2xl font-display font-bold text-navy-950 mb-2">Demande envoyée !</h4>
                             <p class="text-navy-500 font-medium mb-1">Un conseiller va vous rappeler <span id="success-slot-label" class="text-accent-600 font-bold"></span>.</p>
                             <p class="text-xs text-navy-400 mb-6">Gardez votre téléphone à portée de main.</p>
-                            <div class="bg-green-50 border border-green-100 rounded-2xl p-4 mb-6 text-left flex items-start gap-3">
+                            <div class="bg-green-50 border border-green-100 rounded-2xl p-4 mb-8 text-left flex items-start gap-3">
                                 <i data-lucide="clock" class="text-green-600 shrink-0 mt-0.5" style="width:18px;height:18px;"></i>
                                 <p class="text-sm text-green-700 font-medium">Vous recevrez une confirmation par email dans quelques instants.</p>
                             </div>
-                            <button onclick="resetLeadForm()" class="btn btn-outline btn-lg w-full rounded-2xl border-navy-200 hover:bg-navy-50 text-navy-600 flex items-center justify-center gap-2">
-                                <i data-lucide="plus-circle" style="width:18px;height:18px;"></i>
-                                Faire une nouvelle demande
-                            </button>
+
+                            <div class="space-y-4">
+                                <a id="success-track-link" href="/rappel/public/client/login.php" class="btn btn-primary btn-lg w-full h-16 rounded-2xl shadow-premium flex items-center justify-center gap-3 group">
+                                    <i data-lucide="layout-dashboard" class="group-hover:rotate-12 transition-transform" style="width:20px;height:20px;"></i>
+                                    <span>Suivre l'évolution en temps réel</span>
+                                </a>
+                                
+                                <button onclick="resetLeadForm()" class="text-sm font-black text-navy-400 hover:text-navy-950 uppercase tracking-widest flex items-center justify-center gap-2 w-full py-4 transition-colors">
+                                    <i data-lucide="plus-circle" style="width:16px;height:16px;"></i>
+                                    Nouvelle demande
+                                </button>
+                            </div>
                         </div>
 
                         <div id="lead-form-actions" class="flex flex-col gap-4">
@@ -369,10 +392,10 @@ $pageTitle = 'Accueil';
                             
                             <div class="space-y-1 mt-2">
                                 <p class="text-[11px] text-center text-navy-400 font-medium italic">
-                                    En validant, vous acceptez notre <a href="/rappel/public/legal.php#confidentialite" class="text-navy-600 font-bold hover:underline">Politique de confidentialité</a>.
+                                    En validant, vous acceptez notre <a href="/rappel/public/legal.php#confidentialite" class="text-navy-600 font-bold hover:underline">POLITIQUE DE CONFIDENTIALITÉ</a>.
                                 </p>
                                 <p class="text-[11px] text-center text-navy-400 font-medium italic">
-                                    L’utilisation du Service implique l’acceptation des <a href="/rappel/public/legal.php#cgu" class="text-navy-600 font-bold hover:underline">CGU</a>.
+                                    L’utilisation du Service implique l’acceptation des <a href="/rappel/public/legal.php#cgu" class="text-navy-600 font-bold hover:underline">CONDITIONS GÉNÉRALES D’UTILISATION</a>.
                                 </p>
                             </div>
                         </div>
@@ -385,28 +408,83 @@ $pageTitle = 'Accueil';
 
 
     <!-- ===== FEATURES SECTION ===== -->
-    <section class="py-24 bg-white" id="features">
-        <div class="container mx-auto px-4">
-            <div class="text-center max-w-2xl mx-auto mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-navy-900 mb-4">Pourquoi choisir Rappelez-moi ?</h2>
-                <p class="text-slate-500 text-lg">Une plateforme pensée pour votre tranquillité et votre sécurité.</p>
+    <!-- ===== FEATURES SECTION ===== -->
+    <section class="py-32 bg-transparent relative overflow-hidden" id="features">
+        <!-- Decoration -->
+        <div class="absolute top-1/2 left-0 -translate-y-1/2 w-72 h-72 bg-accent-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-1/2 right-0 -translate-y-1/2 w-96 h-96 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="container mx-auto px-6 lg:px-12 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-20 animate-fade-in-up">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-navy-50 text-navy-400 text-[11px] font-black uppercase tracking-widest mb-6 border border-navy-100/50">
+                    <span class="w-2 h-2 rounded-full bg-accent-500 animate-pulse"></span>
+                    Engagement Qualité
+                </div>
+                <h2 class="text-4xl lg:text-5xl font-display font-extrabold text-navy-950 tracking-tight leading-tight">
+                    Pourquoi choisir <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-teal-500">Rappelez-moi ?</span>
+                </h2>
+                <div class="w-20 h-1.5 bg-accent-500 rounded-full mx-auto mt-8 mb-6"></div>
+                <p class="text-navy-500 text-xl font-medium max-w-2xl mx-auto leading-relaxed">
+                    Une plateforme d'excellence pensée pour votre tranquillité, votre sécurité et votre efficacité au quotidien.
+                </p>
             </div>
+
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <?php
                 $features = [
-                    ['icon'=>'shield-check','title'=>'Zero Spam Garanti','desc'=>"Vos coordonnées restent masquées jusqu'à votre validation. Fini le harcèlement téléphonique."],
-                    ['icon'=>'user-check','title'=>'Experts Vérifiés','desc'=>'Chaque professionnel est audité : SIRET, assurance décennale et avis clients contrôlés.'],
-                    ['icon'=>'zap','title'=>'Rappel Instantané','desc'=>"Choisissez votre créneau. Le professionnel s'engage à vous contacter à l'heure précise."],
-                    ['icon'=>'lock','title'=>'Données Sécurisées','desc'=>'Hébergement en France, conforme RGPD. Vous restez maître de vos informations.'],
+                    [
+                        'icon' => 'shield-check',
+                        'title' => 'Zero Spam Garanti',
+                        'desc' => "Vos coordonnées ne sont partagées qu'après votre validation explicite. Fini le harcèlement.",
+                        'gradient' => 'from-indigo-500 to-blue-600',
+                        'bg' => 'bg-indigo-50',
+                        'text' => 'text-indigo-600'
+                    ],
+                    [
+                        'icon' => 'user-check',
+                        'title' => 'Experts Vérifiés',
+                        'desc' => "Chaque professionnel est audité : SIRET, assurances et avis clients sont rigoureusement contrôlés.",
+                        'gradient' => 'from-emerald-500 to-teal-600',
+                        'bg' => 'bg-emerald-50',
+                        'text' => 'text-emerald-600'
+                    ],
+                    [
+                        'icon' => 'zap',
+                        'title' => 'Rappel Précis',
+                        'desc' => "Le professionnel s'engage à vous contacter exactement sur le créneau que vous avez choisi.",
+                        'gradient' => 'from-amber-400 to-orange-500',
+                        'bg' => 'bg-amber-50',
+                        'text' => 'text-amber-600'
+                    ],
+                    [
+                        'icon' => 'lock',
+                        'title' => 'RGPD Compliant',
+                        'desc' => "Vos données sont hébergées en France. Vous disposez d'un contrôle total sur vos informations.",
+                        'gradient' => 'from-rose-500 to-red-600',
+                        'bg' => 'bg-rose-50',
+                        'text' => 'text-rose-600'
+                    ],
                 ];
                 foreach ($features as $i => $f): ?>
-                <div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-lg transition-all duration-300 group animate-fade-in-up"
-                     style="animation-delay:<?= $i * 0.1 ?>s">
-                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="<?= $f['icon'] ?>" style="width:24px;height:24px;"></i>
+                <div class="group relative p-8 rounded-[2.5rem] bg-white/70 backdrop-blur-xl border border-white/80 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 animate-fade-in-up"
+                     style="animation-delay:<?= $i * 0.15 ?>s">
+                    <!-- Glow effect on hover -->
+                    <div class="absolute inset-0 bg-gradient-to-br <?= $f['gradient'] ?> opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500 rounded-[2.5rem]"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br <?= $f['gradient'] ?> flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                            <i data-lucide="<?= $f['icon'] ?>" style="width:32px;height:32px;stroke-width:2.5;"></i>
+                        </div>
+                        
+                        <h3 class="text-2xl font-display font-bold text-navy-950 mb-4 tracking-tight leading-snug"><?= $f['title'] ?></h3>
+                        <p class="text-navy-500 font-medium leading-relaxed"><?= $f['desc'] ?></p>
+                        
+                        <div class="mt-8 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest <?= $f['text'] ?> opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                            <span>En savoir plus</span>
+                            <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold text-navy-900 mb-3"><?= $f['title'] ?></h3>
-                    <p class="text-slate-500 leading-relaxed"><?= $f['desc'] ?></p>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -415,7 +493,7 @@ $pageTitle = 'Accueil';
 
     <?php include __DIR__ . '/includes/footer.php'; ?>
 <!-- Dashboard JS -->
-<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.1"></script>
 <script>
 // ---- Sector Carousel ----
 const sectors = [
@@ -613,6 +691,7 @@ async function submitLead() {
         phone: document.getElementById('lead-phone').value.trim(),
         email: document.getElementById('lead-email').value.trim(),
         zip_code: document.getElementById('lead-zip').value.trim(),
+        city: document.getElementById('lead-city').value.trim(),
     };
 
     try {
@@ -640,6 +719,14 @@ async function submitLead() {
 
         // Recreate icons for the newly visible elements
         if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+        // Update track link with email if not logged in
+        const trackLink = document.getElementById('success-track-link');
+        if (trackLink && !Auth.isLoggedIn()) {
+            trackLink.href = `/rappel/public/client/login.php?email=${encodeURIComponent(payload.email)}`;
+        } else if (trackLink) {
+            trackLink.href = '/rappel/public/client/dashboard.php';
+        }
 
         // Smooth scroll to success message
         successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -667,7 +754,7 @@ function resetLeadForm() {
     selectedTimeSlot = '';
 
     // Reset inputs
-    ['lead-firstname','lead-lastname','lead-phone','lead-email','lead-zip'].forEach(id => {
+    ['lead-firstname','lead-lastname','lead-phone','lead-email','lead-zip','lead-city'].forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.value = ''; el.classList.remove('border-red-300','bg-red-50'); }
     });

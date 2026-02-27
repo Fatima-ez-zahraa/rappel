@@ -131,7 +131,7 @@ $pageTitle = 'Créer un compte Expert';
                     <label class="form-label">Adresse *</label>
                     <input type="text" id="address" class="form-input rounded-2xl" placeholder="12 rue de la Paix">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="form-label">Code Postal *</label>
                         <input type="text" id="zip_code" class="form-input rounded-2xl" placeholder="75001" maxlength="5">
@@ -153,7 +153,7 @@ $pageTitle = 'Créer un compte Expert';
             <!-- STEP 2: Contact -->
             <div id="signup-step-2" class="space-y-6 hidden">
                 <h2 class="text-2xl font-display font-bold text-navy-950">Vos Coordonnées</h2>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="form-label">Prénom *</label>
                         <input type="text" id="first_name" class="form-input rounded-2xl" placeholder="Jean">
@@ -226,8 +226,8 @@ $pageTitle = 'Créer un compte Expert';
                     <div class="flex items-start gap-3">
                         <i data-lucide="shield-check" class="text-accent-600 flex-shrink-0 mt-0.5" style="width:18px;height:18px;"></i>
                         <div class="space-y-2">
-                            <p>En créant votre compte, vous acceptez nos <a href="/rappel/public/legal.php#cgu" class="text-accent-600 font-bold hover:underline">Conditions Générales</a> et notre <a href="/rappel/public/legal.php#confidentialite" class="text-accent-600 font-bold hover:underline">Politique de Confidentialité</a>.</p>
-                            <p class="text-[10px] italic">L’utilisation du Service implique l’acceptation des CGU. En validant, vous acceptez notre Politique de confidentialité.</p>
+                            <p>En créant votre compte, vous acceptez nos <a href="/rappel/public/legal.php#cgu" class="text-accent-600 font-bold hover:underline">CONDITIONS GÉNÉRALES D’UTILISATION</a> et notre <a href="/rappel/public/legal.php#confidentialite" class="text-accent-600 font-bold hover:underline">POLITIQUE DE CONFIDENTIALITÉ</a>.</p>
+                            <p class="text-[10px] italic">L’utilisation du Service implique l’acceptation des CONDITIONS GÉNÉRALES D’UTILISATION. En validant, vous acceptez notre POLITIQUE DE CONFIDENTIALITÉ.</p>
                         </div>
                     </div>
                 </div>
@@ -251,7 +251,7 @@ $pageTitle = 'Créer un compte Expert';
     </div>
 </div>
 
-<script src="/rappel/public/assets/js/app.js?v=3.0"></script>
+<script src="/rappel/public/assets/js/app.js?v=3.1"></script>
 <script>
 let currentStep = 1;
 
@@ -408,25 +408,19 @@ async function handleSignup() {
     setButtonLoading(btn, true);
 
     const payload = {
-        companyName: document.getElementById('company_name').value.trim(),
         company_name: document.getElementById('company_name').value.trim(),
         siret: document.getElementById('siret').value.trim(),
         address: document.getElementById('address').value.trim(),
         zip: document.getElementById('zip_code').value.trim(),
-        zip_code: document.getElementById('zip_code').value.trim(),
         city: document.getElementById('city').value.trim(),
-        firstName: document.getElementById('first_name').value.trim(),
         first_name: document.getElementById('first_name').value.trim(),
-        lastName: document.getElementById('last_name').value.trim(),
         last_name: document.getElementById('last_name').value.trim(),
         email: document.getElementById('email').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         password: document.getElementById('password').value,
-        legalForm: document.getElementById('legal_form').value.trim(),
-        creationYear: document.getElementById('creation_year').value.trim(),
         legal_form: document.getElementById('legal_form').value.trim(),
         creation_year: document.getElementById('creation_year').value.trim(),
-        sector,
+        sectors: [sector],
         zone,
         description: document.getElementById('description').value.trim(),
     };
