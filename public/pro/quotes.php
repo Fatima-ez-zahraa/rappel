@@ -27,7 +27,7 @@ $token = getToken();
         <p id="stat-pending" class="text-2xl font-display font-bold text-amber-700">0</p>
     </div>
     <div class="card p-4">
-        <p class="text-xs uppercase tracking-wider font-bold text-navy-400 mb-1">Acceptes</p>
+        <p class="text-xs uppercase tracking-wider font-bold text-navy-400 mb-1">Accept&eacute;s</p>
         <p id="stat-accepted" class="text-2xl font-display font-bold text-accent-700">0</p>
     </div>
     <div class="card p-4">
@@ -45,10 +45,9 @@ $token = getToken();
         <select id="q-filter-status" class="form-select rounded-xl">
             <option value="all">Tous les statuts</option>
             <option value="attente_client">En attente client</option>
-            <option value="sent">Envoye</option>
-            <option value="accepted">Accepte</option>
-            <option value="rejected">Refuse</option>
-            <option value="draft">Brouillon</option>
+            <option value="accepted">Accept&eacute; par client</option>
+            <option value="rejected">Refus&eacute; par client</option>
+            <option value="completed">R&eacute;alis&eacute;</option>
         </select>
         <select id="q-sort" class="form-select rounded-xl">
             <option value="recent">Plus recents</option>
@@ -62,6 +61,14 @@ $token = getToken();
         <p id="quotes-count" class="text-sm text-navy-500 font-medium">Chargement...</p>
         <button id="q-reset-filters" type="button" class="text-sm font-bold text-brand-700 hover:text-brand-600 transition-colors">Reinitialiser</button>
     </div>
+</div>
+
+<div id="lead-opportunities" class="card p-4 md:p-5 mb-5 hidden">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-black text-navy-950 uppercase tracking-widest">Demandes a deviser</h2>
+        <p id="lead-opportunities-count" class="text-xs text-navy-500 font-bold">0 lead</p>
+    </div>
+    <div id="lead-opportunities-list" class="grid gap-3 md:grid-cols-2"></div>
 </div>
 
 <div id="quotes-container">
@@ -98,16 +105,20 @@ $token = getToken();
                     <label class="form-label">Statut</label>
                     <select id="q-status" class="form-select">
                         <option value="attente_client">En attente client</option>
-                        <option value="sent">Envoye</option>
-                        <option value="accepted">Accepte</option>
-                        <option value="rejected">Refuse</option>
-                        <option value="draft">Brouillon</option>
+                        <option value="accepted">Accept&eacute; client</option>
+                        <option value="rejected">Refus&eacute; client</option>
+                        <option value="completed">R&eacute;alis&eacute;</option>
                     </select>
                 </div>
             </div>
             <div>
                 <label class="form-label">Description</label>
                 <textarea id="q-desc" class="form-textarea" placeholder="Details de la prestation..."></textarea>
+            </div>
+            <div>
+                <label class="form-label">Documents (optionnel)</label>
+                <input type="file" id="q-doc" class="form-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" multiple>
+                <p class="text-[10px] text-navy-400 mt-1">Formats acceptes: PDF, DOC/DOCX, XLS/XLSX, PNG, JPG (max 10MB chacun, max 10 fichiers)</p>
             </div>
             <div id="q-form-error" class="form-error hidden"></div>
             <div class="flex gap-3 pt-2">
@@ -147,16 +158,21 @@ $token = getToken();
                     <label class="form-label">Statut</label>
                     <select id="eq-status" class="form-select">
                         <option value="attente_client">En attente client</option>
-                        <option value="sent">Envoye</option>
-                        <option value="accepted">Accepte</option>
-                        <option value="rejected">Refuse</option>
-                        <option value="draft">Brouillon</option>
+                        <option value="accepted">Accept&eacute; client</option>
+                        <option value="rejected">Refus&eacute; client</option>
+                        <option value="completed">R&eacute;alis&eacute;</option>
                     </select>
                 </div>
             </div>
             <div>
                 <label class="form-label">Description / Projet</label>
                 <textarea id="eq-project" class="form-textarea" placeholder="Details de la prestation..."></textarea>
+            </div>
+            <div>
+                <label class="form-label">Documents (optionnel)</label>
+                <input type="file" id="eq-doc" class="form-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" multiple>
+                <p class="text-[10px] text-navy-400 mt-1">Formats acceptes: PDF, DOC/DOCX, XLS/XLSX, PNG, JPG (max 10MB chacun, max 10 fichiers)</p>
+                <div id="eq-current-docs" class="hidden mt-2 space-y-1"></div>
             </div>
             <div id="eq-form-error" class="form-error hidden"></div>
             <div class="flex gap-3 pt-2">
@@ -176,16 +192,26 @@ const PHP_TOKEN = '<?php echo $safeToken; ?>';
 const statusColors = {
     draft: 'bg-navy-50 text-navy-600',
     sent: 'bg-blue-50 text-blue-700',
+    envoye: 'bg-blue-50 text-blue-700',
     attente_client: 'bg-amber-50 text-amber-700',
     accepted: 'bg-accent-50 text-accent-700',
     rejected: 'bg-red-50 text-red-700',
+    signe: 'bg-accent-50 text-accent-700',
+    refuse: 'bg-red-50 text-red-700',
+    completed: 'bg-emerald-50 text-emerald-700',
+    realise: 'bg-emerald-50 text-emerald-700',
 };
 const statusLabels = {
     draft: 'Brouillon',
-    sent: 'Envoye',
+    sent: 'Envoy\u00e9',
+    envoye: 'Envoy\u00e9',
     attente_client: 'En attente client',
-    accepted: 'Accepte',
-    rejected: 'Refuse',
+    accepted: 'Accept\u00e9 par client',
+    rejected: 'Refus\u00e9 par client',
+    signe: 'Accept\u00e9 par client',
+    refuse: 'Refus\u00e9 par client',
+    completed: 'R\u00e9alis\u00e9',
+    realise: 'R\u00e9alis\u00e9',
 };
 
 const state = {
@@ -194,9 +220,15 @@ const state = {
     status: 'all',
     sort: 'recent',
 };
+let editQuoteRemovedDocs = [];
 
 function normalizeStatus(value) {
-    return String(value || '').trim().toLowerCase();
+    const k = String(value || '').trim().toLowerCase();
+    if (k === 'signe') return 'accepted';
+    if (k === 'refuse') return 'rejected';
+    if (k === 'envoye' || k === 'envoyé') return 'sent';
+    if (k === 'realise' || k === 'réalisé') return 'completed';
+    return k;
 }
 
 function formatAmount(value) {
@@ -211,6 +243,11 @@ function escapeHtml(value) {
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
+}
+
+function getQuoteDocs(q) {
+    if (Array.isArray(q?.docs) && q.docs.length) return q.docs.filter(Boolean);
+    return q?.doc_path ? [q.doc_path] : [];
 }
 
 async function loadQuotes() {
@@ -269,8 +306,8 @@ function getFilteredSortedQuotes() {
 
 function renderStats(allQuotes) {
     const total = allQuotes.length;
-    const pending = allQuotes.filter(q => normalizeStatus(q.status) === 'attente_client').length;
-    const accepted = allQuotes.filter(q => normalizeStatus(q.status) === 'accepted').length;
+    const pending = allQuotes.filter(q => ['attente_client', 'sent', 'draft'].includes(normalizeStatus(q.status))).length;
+    const accepted = allQuotes.filter(q => ['accepted', 'signe'].includes(normalizeStatus(q.status))).length;
     const amount = allQuotes.reduce((sum, q) => sum + parseFloat(q.amount || 0), 0);
 
     document.getElementById('stat-total').textContent = String(total);
@@ -315,6 +352,7 @@ function renderQuotes(quotes) {
         const client = escapeHtml(displayName);
         const lead = q.lead_id ? allLeads.find(l => String(l.id) === String(q.lead_id)) : null;
         const description = escapeHtml(q.project_name || q.description || '');
+        const docs = getQuoteDocs(q);
         const createdAt = new Date(q.created_at || Date.now()).toLocaleDateString('fr-FR');
         const amount = formatAmount(q.amount || 0);
         const label = statusLabels[status] || escapeHtml(q.status || 'Inconnu');
@@ -330,12 +368,18 @@ function renderQuotes(quotes) {
                     <span class="badge ${statusColor}">${label}</span>
                 </div>
                 <p class="text-sm text-navy-500 font-medium ${description ? '' : 'italic'}">${description || 'Aucune description'}</p>
+                ${docs.length ? `<div class="mt-2 flex flex-wrap items-center gap-2">
+                    ${docs.slice(0, 2).map((doc, index) => `<a href="${encodeURI(String(doc))}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-600 transition-colors"><i data-lucide="paperclip" style="width:14px;height:14px;"></i>Document ${index + 1}</a>`).join('')}
+                    ${docs.length > 2 ? `<span class="text-xs text-navy-400 font-bold">+${docs.length - 2} autres</span>` : ''}
+                </div>` : ''}
             </div>
             <div class="md:text-right md:min-w-[180px]">
                 <p class="text-2xl font-display font-bold text-navy-950">${amount}</p>
                 <p class="text-xs text-navy-400 font-medium">Cree le ${createdAt}</p>
             </div>
             <div class="flex md:flex-col gap-2 md:min-w-[130px]">
+                <a href="/rappel/public/quote-view.php?id=${encodeURIComponent(q.id)}" class="btn btn-outline btn-sm rounded-xl text-center">Voir devis</a>
+                ${['accepted','signe'].includes(status) ? `<button type="button" onclick="markQuoteCompleted('${q.id}')" class="btn btn-primary btn-sm rounded-xl">Marquer r&eacute;alis&eacute;</button>` : ''}
                 <button type="button" onclick="openEditQuote('${q.id}')" class="btn btn-outline btn-sm rounded-xl">Modifier</button>
             </div>
         </article>`;
@@ -344,7 +388,83 @@ function renderQuotes(quotes) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+function getLeadLatestQuoteStatusMap() {
+    const map = new Map();
+    (state.quotes || []).forEach((q) => {
+        const leadId = String(q?.lead_id || '').trim();
+        if (!leadId) return;
+        const current = map.get(leadId);
+        const nextDate = new Date(q.created_at || 0).getTime();
+        const currentDate = current ? new Date(current.created_at || 0).getTime() : -1;
+        if (!current || nextDate >= currentDate) {
+            map.set(leadId, { status: normalizeStatus(q.status), created_at: q.created_at || null });
+        }
+    });
+    return map;
+}
+
+function getLeadsToQuote() {
+    const latestQuoteByLead = getLeadLatestQuoteStatusMap();
+    return (allLeads || []).filter((lead) => {
+        const id = String(lead?.id || '').trim();
+        if (!id) return false;
+        const latest = latestQuoteByLead.get(id);
+        if (!latest) return true; // no quote yet
+        return ['rejected', 'refuse'].includes(String(latest.status || '').toLowerCase());
+    });
+}
+
+function openCreateQuoteWithLead(leadId) {
+    openCreateQuote();
+    const select = document.getElementById('q-lead-select');
+    if (!select) return;
+    select.value = String(leadId || '');
+    onLeadSelectChange('q');
+}
+
+function renderLeadOpportunities() {
+    const wrap = document.getElementById('lead-opportunities');
+    const countEl = document.getElementById('lead-opportunities-count');
+    const listEl = document.getElementById('lead-opportunities-list');
+    if (!wrap || !countEl || !listEl) return;
+
+    const latestQuoteByLead = getLeadLatestQuoteStatusMap();
+    const leads = getLeadsToQuote();
+    if (!leads.length) {
+        wrap.classList.add('hidden');
+        listEl.innerHTML = '';
+        countEl.textContent = '0 lead';
+        return;
+    }
+
+    wrap.classList.remove('hidden');
+    countEl.textContent = `${leads.length} lead${leads.length > 1 ? 's' : ''}`;
+    listEl.innerHTML = leads.slice(0, 8).map((l) => {
+        const name = escapeHtml(l.name || 'Client');
+        const need = escapeHtml(l.need || 'Projet');
+        const sector = escapeHtml(l.sector || 'general');
+        const status = escapeHtml(l.status || '-');
+        const latest = latestQuoteByLead.get(String(l.id || '').trim());
+        const canResend = latest && ['rejected', 'refuse'].includes(String(latest.status || '').toLowerCase());
+        return `
+            <div class="rounded-2xl border border-navy-100 bg-white p-4 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="font-black text-navy-950 truncate">${name}</p>
+                    <p class="text-xs text-navy-500 mt-1 truncate">${need}</p>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest">${sector}</span>
+                        <span class="px-2 py-0.5 rounded-lg bg-navy-50 text-navy-500 text-[9px] font-black uppercase tracking-widest">${status}</span>
+                        ${canResend ? '<span class="px-2 py-0.5 rounded-lg bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest">Devis refuse</span>' : ''}
+                    </div>
+                </div>
+                <button type="button" onclick="openCreateQuoteWithLead('${escapeHtml(l.id)}')" class="btn btn-primary btn-sm rounded-xl whitespace-nowrap">Creer devis</button>
+            </div>
+        `;
+    }).join('');
+}
+
 function refreshQuotesUI() {
+    renderLeadOpportunities();
     renderStats(state.quotes);
     renderQuotes(getFilteredSortedQuotes());
 }
@@ -368,6 +488,7 @@ function openCreateQuote() {
     document.getElementById('q-client').value = '';
     document.getElementById('q-amount').value = '';
     document.getElementById('q-desc').value = '';
+    document.getElementById('q-doc').value = '';
     document.getElementById('q-client').focus();
 }
 
@@ -388,11 +509,30 @@ function openEditQuote(id) {
     document.getElementById('eq-amount').value = quote.amount || '';
     document.getElementById('eq-status').value = normalizeStatus(quote.status) || 'attente_client';
     document.getElementById('eq-project').value = quote.project_name || '';
+    document.getElementById('eq-doc').value = '';
     document.getElementById('eq-form-error').classList.add('hidden');
+    editQuoteRemovedDocs = [];
+    const currentDocsWrap = document.getElementById('eq-current-docs');
+    const docs = getQuoteDocs(quote);
+    if (docs.length) {
+        currentDocsWrap.innerHTML = docs.map((doc, index) => `<div class="flex items-center gap-2">
+            <a href="${encodeURI(String(doc))}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-600 transition-colors">
+                <i data-lucide="paperclip" style="width:14px;height:14px;"></i>Document actuel ${index + 1}
+            </a>
+            <button type="button" onclick="markDocForRemoval(decodeURIComponent('${encodeURIComponent(String(doc))}'))" class="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-500">
+                <i data-lucide="trash-2" style="width:13px;height:13px;"></i>Supprimer
+            </button>
+        </div>`).join('');
+        currentDocsWrap.classList.remove('hidden');
+    } else {
+        currentDocsWrap.innerHTML = '';
+        currentDocsWrap.classList.add('hidden');
+    }
     
     const modal = document.getElementById('edit-quote-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     document.getElementById('eq-client').focus();
 }
 
@@ -401,6 +541,45 @@ function closeEditQuote() {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
     document.getElementById('eq-form-error').classList.add('hidden');
+    document.getElementById('eq-doc').value = '';
+    const currentDocsWrap = document.getElementById('eq-current-docs');
+    currentDocsWrap.innerHTML = '';
+    currentDocsWrap.classList.add('hidden');
+    editQuoteRemovedDocs = [];
+}
+
+function renderEditCurrentDocs() {
+    const id = document.getElementById('eq-id').value;
+    const quote = state.quotes.find((q) => String(q.id) === String(id));
+    const currentDocsWrap = document.getElementById('eq-current-docs');
+    if (!quote || !currentDocsWrap) return;
+    const docs = getQuoteDocs(quote);
+    const visibleDocs = docs.filter((doc) => !editQuoteRemovedDocs.includes(String(doc)));
+    if (!visibleDocs.length) {
+        currentDocsWrap.innerHTML = '<p class="text-[11px] text-navy-400 font-medium">Tous les documents existants seront supprimés après enregistrement.</p>';
+        currentDocsWrap.classList.remove('hidden');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+    currentDocsWrap.innerHTML = visibleDocs.map((doc, index) => `<div class="flex items-center gap-2">
+        <a href="${encodeURI(String(doc))}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-600 transition-colors">
+            <i data-lucide="paperclip" style="width:14px;height:14px;"></i>Document actuel ${index + 1}
+        </a>
+        <button type="button" onclick="markDocForRemoval(decodeURIComponent('${encodeURIComponent(String(doc))}'))" class="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-500">
+            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>Supprimer
+        </button>
+    </div>`).join('');
+    currentDocsWrap.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function markDocForRemoval(path) {
+    const value = String(path || '').trim();
+    if (!value) return;
+    if (!editQuoteRemovedDocs.includes(value)) {
+        editQuoteRemovedDocs.push(value);
+    }
+    renderEditCurrentDocs();
 }
 
 async function handleCreateQuote(e) {
@@ -415,6 +594,8 @@ async function handleCreateQuote(e) {
     const amount = parseFloat(amountRaw);
     const status = document.getElementById('q-status').value;
     const description = document.getElementById('q-desc').value.trim();
+    const docInput = document.getElementById('q-doc');
+    const docFiles = Array.from(docInput?.files || []);
 
     if (!clientName) {
         formError.textContent = 'Le nom du client est requis.';
@@ -426,25 +607,43 @@ async function handleCreateQuote(e) {
         formError.classList.remove('hidden');
         return;
     }
+    if (docFiles.length > 10) {
+        formError.textContent = 'Maximum 10 documents par devis.';
+        formError.classList.remove('hidden');
+        return;
+    }
+    if (docFiles.some((f) => f.size > 10 * 1024 * 1024)) {
+        formError.textContent = 'Un document depasse 10MB.';
+        formError.classList.remove('hidden');
+        return;
+    }
 
     setButtonLoading(btn, true);
     try {
-        await apiFetch('/quotes', {
+        const apiBase = window.API_BASE_URL || (window.location.pathname.startsWith('/rappel') ? '/rappel/api' : '/api');
+        const token = Auth.getToken() || PHP_TOKEN || '';
+        const formData = new FormData();
+        formData.append('client_name', clientName);
+        formData.append('lead_id', leadId || '');
+        formData.append('amount', String(amount));
+        formData.append('status', status);
+        formData.append('project_name', description);
+        formData.append('description', description);
+        docFiles.forEach((file) => formData.append('doc[]', file));
+
+        const res = await fetch(`${apiBase}/quotes`, {
             method: 'POST',
-            body: JSON.stringify({
-                client_name: clientName,
-                lead_id: leadId || null,
-                amount: amount,
-                status: status,
-                project_name: description,
-                description: description,
-            }),
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: formData,
         });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(payload.error || payload.message || 'Erreur lors de la creation du devis.');
 
         document.getElementById('q-client').value = '';
         document.getElementById('q-amount').value = '';
         document.getElementById('q-status').value = 'attente_client';
         document.getElementById('q-desc').value = '';
+        document.getElementById('q-doc').value = '';
         document.getElementById('q-lead-select').value = ''; // Reset lead select
         closeCreateQuote();
         await loadQuotes();
@@ -471,6 +670,8 @@ async function handleEditQuote(e) {
     const amount = parseFloat(amountRaw);
     const status = document.getElementById('eq-status').value;
     const projectName = document.getElementById('eq-project').value.trim();
+    const docInput = document.getElementById('eq-doc');
+    const docFiles = Array.from(docInput?.files || []);
 
     if (!id) {
         formError.textContent = 'Devis introuvable.';
@@ -487,20 +688,41 @@ async function handleEditQuote(e) {
         formError.classList.remove('hidden');
         return;
     }
+    if (docFiles.length > 10) {
+        formError.textContent = 'Maximum 10 documents par devis.';
+        formError.classList.remove('hidden');
+        return;
+    }
+    if (docFiles.some((f) => f.size > 10 * 1024 * 1024)) {
+        formError.textContent = 'Un document depasse 10MB.';
+        formError.classList.remove('hidden');
+        return;
+    }
 
     setButtonLoading(btn, true);
     try {
-        await apiFetch(`/quotes/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({
-                client_name: clientName,
-                lead_id: leadId || null,
-                amount: amount,
-                status: status,
-                project_name: projectName,
-                description: projectName,
-            }),
+        const apiBase = window.API_BASE_URL || (window.location.pathname.startsWith('/rappel') ? '/rappel/api' : '/api');
+        const token = Auth.getToken() || PHP_TOKEN || '';
+        const formData = new FormData();
+        formData.append('_method', 'PATCH');
+        formData.append('client_name', clientName);
+        formData.append('lead_id', leadId || '');
+        formData.append('amount', String(amount));
+        formData.append('status', status);
+        formData.append('project_name', projectName);
+        formData.append('description', projectName);
+        if (editQuoteRemovedDocs.length) {
+            formData.append('remove_docs', JSON.stringify(editQuoteRemovedDocs));
+        }
+        docFiles.forEach((file) => formData.append('doc[]', file));
+
+        const res = await fetch(`${apiBase}/quotes/${id}`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: formData,
         });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(payload.error || payload.message || 'Erreur lors de la modification du devis.');
 
         closeEditQuote();
         await loadQuotes();
@@ -511,6 +733,20 @@ async function handleEditQuote(e) {
         showToast(err.message || 'Erreur lors de la modification du devis.', 'error');
     } finally {
         setButtonLoading(btn, false, 'Enregistrer');
+    }
+}
+
+async function markQuoteCompleted(id) {
+    if (!confirm('Confirmer que ce devis est r\u00e9alis\u00e9 ?')) return;
+    try {
+        await apiFetch(`/quotes/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'completed' }),
+        });
+        await loadQuotes();
+        showToast('Devis marqu\u00e9 comme r\u00e9alis\u00e9.', 'success');
+    } catch (err) {
+        showToast(err.message || 'Erreur lors de la mise a jour.', 'error');
     }
 }
 
@@ -610,3 +846,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <?php include __DIR__ . '/../includes/dashboard_layout_bottom.php'; ?>
+

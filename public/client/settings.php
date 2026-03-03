@@ -188,22 +188,6 @@ if (($user['role'] ?? '') === 'provider') { header('Location: /rappel/public/pro
 
             <!-- ==== DATA (GDPR) ==== -->
             <section id="tab-data" class="tab-content hidden space-y-4">
-                <!-- Export -->
-                <div class="rounded-2xl bg-slate-50 border border-slate-200 p-5 space-y-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 flex-shrink-0">
-                            <i data-lucide="download" style="width:18px;height:18px;"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-black text-slate-900 text-sm">Exporter mes données</h4>
-                            <p class="text-xs text-slate-500">Téléchargez toutes vos demandes et informations au format JSON (RGPD).</p>
-                        </div>
-                    </div>
-                    <button onclick="doExport()" id="export-btn"
-                            class="w-full h-10 bg-white border border-slate-200 hover:bg-slate-900 hover:text-white hover:border-slate-900 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-widest transition-all">
-                        Télécharger mes données
-                    </button>
-                </div>
 
                 <!-- Delete -->
                 <div class="rounded-2xl bg-red-50 border border-red-100 p-5 space-y-3">
@@ -355,12 +339,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <i data-lucide="list" style="width:24px;height:24px;"></i>
         <span>Demandes</span>
     </a>
-    <div class="flex-1 relative flex justify-center">
-        <button onclick="openModal()" class="absolute -top-10 w-16 h-16 bg-[#0E1648] rounded-3xl flex items-center justify-center shadow-2xl shadow-brand-900/40 active:scale-90 transition-all group">
-            <i data-lucide="plus" class="text-white group-hover:scale-125 transition-transform" style="width:32px;height:32px;"></i>
-        </button>
-        <span class="text-[0.65rem] font-black text-slate-400 uppercase tracking-widest mt-8">Nouveau</span>
-    </div>
+    <a href="/rappel/public/client/quotes.php" class="bnav-btn">
+        <i data-lucide="file-text" style="width:24px;height:24px;"></i>
+        <span>Devis</span>
+    </a>
     <a href="/rappel/public/client/settings.php" class="bnav-btn active">
         <i data-lucide="settings" style="width:24px;height:24px;"></i>
         <span>Profil</span>

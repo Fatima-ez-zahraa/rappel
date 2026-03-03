@@ -5,11 +5,11 @@ require_once 'config/db.php';
 echo "Database Setup & Verification\n";
 echo "=============================\n";
 
-$host = "localhost";
-$port = "3307";
-$username = "root";
-$password = "";
-$dbname = "rappel";
+$host = $_ENV['DB_HOST'] ?? "localhost";
+$port = $_ENV['DB_PORT'] ?? "3306";
+$username = $_ENV['DB_USER'] ?? "beta-user";
+$password = $_ENV['DB_PASS'] ?? "Fatima2026++";
+$dbname = $_ENV['DB_NAME'] ?? "beta-db";
 
 try {
     // 1. Connect to MySQL Server (no DB)

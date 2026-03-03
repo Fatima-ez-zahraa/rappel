@@ -13,8 +13,7 @@
                     <img src="/rappel/public/assets/img/logo.png" alt="Rappelez-moi" class="h-12 w-auto object-contain brightness-0 invert">
                 </a>
                 <p class="text-navy-300 text-lg leading-relaxed font-medium max-w-md">
-                    Connecter les particuliers aux meilleurs experts à l'instant T. 
-                    Une solution innovante pour des échanges humains, sécurisés et sans harcèlement.
+                    Connecter les particuliers aux meilleurs experts à l'instant.
                 </p>
                 <!-- Social links (Placeholders) -->
                 <div class="flex gap-4">

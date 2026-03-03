@@ -142,13 +142,21 @@ try {
 
         case 'quotes':
             $company = new CompanyController();
-            if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+            $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+            $methodOverride = '';
+            if ($method === 'POST') {
+                $methodOverride = strtoupper((string)($_POST['_method'] ?? $_GET['_method'] ?? $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? ''));
+            }
+
+            if ($method == 'GET' && !empty($action)) {
+                $company->getQuoteById($action);
+            } elseif ($method == 'GET') {
                 $company->getQuotes();
-            } elseif ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            } elseif ($method == 'POST' && empty($action)) {
                 $company->createQuote();
-            } elseif ($_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($action)) {
+            } elseif ((($method == 'PATCH') || ($method == 'POST' && $methodOverride === 'PATCH')) && !empty($action)) {
                 $company->updateQuote($action);
-            } elseif ($_SERVER['REQUEST_METHOD'] == 'DELETE' && !empty($action)) {
+            } elseif ($method == 'DELETE' && !empty($action)) {
                 $company->deleteQuote($action);
             } else {
                 http_response_code(404);
@@ -205,6 +213,12 @@ try {
                 $company->getClientDashboardStats();
             } elseif ($action == 'quotes' && $_SERVER['REQUEST_METHOD'] == 'GET') {
                 $company->getClientQuotes();
+            } elseif ($action == 'expert-notes' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getClientExpertNotes();
+            } elseif ($action == 'partner-notes' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getClientPartnerNotes();
+            } elseif ($action == 'partner-notes' && $_SERVER['REQUEST_METHOD'] == 'POST') {
+                $company->createClientPartnerNote();
             } elseif ($action == 'accept-quote' && $_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
                 $company->acceptQuote($id);
             } elseif ($action == 'refuse-quote' && $_SERVER['REQUEST_METHOD'] == 'PATCH' && !empty($id)) {
@@ -213,6 +227,22 @@ try {
                 $company->exportClientData();
             } elseif ($action == 'delete' && $_SERVER['REQUEST_METHOD'] == 'DELETE') {
                 $company->deleteClientAccount();
+            } else {
+                http_response_code(404);
+                echo json_encode(['error' => 'Endpoint not found']);
+            }
+            break;
+
+        case 'feedback':
+            $company = new CompanyController();
+            if ($action == 'client' && $_SERVER['REQUEST_METHOD'] == 'POST') {
+                $company->createClientPartnerNote();
+            } elseif ($action == 'client' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getClientPartnerNotes();
+            } elseif ($action == 'provider' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getProviderClientNotes();
+            } elseif ($action == 'admin' && $_SERVER['REQUEST_METHOD'] == 'GET') {
+                $company->getAdminClientPartnerNotes();
             } else {
                 http_response_code(404);
                 echo json_encode(['error' => 'Endpoint not found']);

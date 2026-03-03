@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 requireAuth(false);
 $pageTitle = 'Mon Espace';
@@ -164,6 +164,21 @@ if (($user['role'] ?? '') === 'admin')    { header('Location: /rappel/public/adm
         <?php endforeach; ?>
     </div>
 
+    <a href="/rappel/public/client/quotes.php" class="block bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center">
+                    <i data-lucide="file-text" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Espace devis</p>
+                    <p class="font-black text-slate-900 text-sm">Voir mes devis</p>
+                </div>
+            </div>
+            <i data-lucide="chevron-right" class="text-slate-300" style="width:18px;height:18px;"></i>
+        </div>
+    </a>
+
     <!-- Pending Quotes -->
     <div id="quotes-section" class="hidden">
         <div class="flex items-center justify-between mb-4">
@@ -171,6 +186,9 @@ if (($user['role'] ?? '') === 'admin')    { header('Location: /rappel/public/adm
                 <div class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
                 <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Devis en attente</h2>
             </div>
+            <a href="/rappel/public/client/quotes.php" class="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:text-brand-700 transition-colors">
+                Voir mes devis
+            </a>
             <span class="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 flex items-center gap-1">
                 <i data-lucide="alert-circle" style="width:11px;height:11px;"></i> Action requise
             </span>
@@ -200,8 +218,16 @@ if (($user['role'] ?? '') === 'admin')    { header('Location: /rappel/public/adm
             <div class="skeleton h-32 rounded-3xl" style="opacity:.7"></div>
         </div>
     </div>
-</div>
 
+    <!-- Expert Notes -->
+    <div id="expert-notes-section">
+        <div class="flex items-center gap-2 mb-4">
+            <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+            <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Notes des experts partenaires & vos avis</h2>
+        </div>
+        <div id="expert-notes-container" class="space-y-4"></div>
+    </div>
+</div>
 <!-- ============================
      NEW REQUEST MODAL (Multi-step)
      ============================ -->
@@ -336,14 +362,20 @@ if (($user['role'] ?? '') === 'admin')    { header('Location: /rappel/public/adm
                 </div>
             </div>
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Disponibilité souhaitée</label>
-                <div class="grid grid-cols-3 gap-2" id="slot-grid">
-                    <?php foreach(['Dès que possible','Cette semaine','Ce mois-ci'] as $slot): ?>
-                    <button type="button" class="sector-btn text-center" data-value="<?= $slot ?>" onclick="selectSlot(this)">
-                        <?= $slot ?>
-                    </button>
-                    <?php endforeach; ?>
-                </div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Date souhaitée (optionnel)</label>
+                <input type="date" id="m-preferred-date"
+                       class="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-brand-400 outline-none font-bold text-slate-900 text-sm transition-all">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Heure exacte souhaitée (optionnel)</label>
+                <input type="time" id="m-preferred-time"
+                       class="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-brand-400 outline-none font-bold text-slate-900 text-sm transition-all">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Document (optionnel)</label>
+                <input type="file" id="m-doc" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                       class="w-full h-12 px-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-brand-400 outline-none text-sm text-slate-700 transition-all file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-brand-700">
+                <p class="mt-1 text-[10px] text-slate-400 font-medium">Formats: PDF, DOC/DOCX, XLS/XLSX, PNG, JPG (max 10MB).</p>
             </div>
 
             <!-- Summary Box -->
@@ -396,6 +428,8 @@ if (($user['role'] ?? '') === 'admin')    { header('Location: /rappel/public/adm
 const TOKEN  = '<?= addslashes($token) ?>';
 const FULL_NAME = '<?= addslashes(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''))) ?>';
 let allRequests = [];
+let allExpertNotes = [];
+let allClientPartnerNotes = [];
 let selectedSectorID = '', selectedSectorText = '', selectedSlot = '', currentStep = 1;
 
 /* ===== INIT ===== */
@@ -419,15 +453,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadData() {
     try {
-        const [stats, requests, quotes] = await Promise.all([
+        const [stats, requests, quotes, expertNotes, partnerNotes] = await Promise.all([
             apiFetch('/client/stats'),
             apiFetch('/leads'),
             apiFetch('/client/quotes'),
+            apiFetch('/client/expert-notes'),
+            apiFetch('/client/partner-notes'),
         ]);
         renderKPIs(stats);
         allRequests = requests || [];
+        allExpertNotes = Array.isArray(expertNotes) ? expertNotes : [];
+        allClientPartnerNotes = Array.isArray(partnerNotes) ? partnerNotes : [];
         renderRequests(allRequests);
         renderQuotes(quotes);
+        renderExpertNotes(allExpertNotes);
     } catch(e) { console.error(e); }
 }
 
@@ -438,7 +477,7 @@ function renderKPIs(s) {
         el.classList.remove('skeleton','w-10','h-8');
     });
     document.getElementById('kpi-active').textContent = s.active_requests ?? 0;
-    document.getElementById('kpi-quotes').textContent = s.pending_quotes ?? 0;
+    document.getElementById('kpi-quotes').textContent = s.total_quotes ?? s.pending_quotes ?? 0;
     document.getElementById('kpi-done').textContent   = s.completed_interventions ?? 0;
 }
 
@@ -465,7 +504,7 @@ function filterRequests(type) {
 function renderQuotes(quotes) {
     const section   = document.getElementById('quotes-section');
     const container = document.getElementById('quotes-container');
-    const pending   = (quotes || []).filter(q => q.status === 'attente_client' || q.status === 'draft');
+    const pending   = (quotes || []).filter(q => q.status === 'attente_client' || q.status === 'draft' || q.status === 'sent');
     if (!pending.length) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
     container.innerHTML = pending.map(q => `
@@ -484,9 +523,12 @@ function renderQuotes(quotes) {
                 <h3 class="font-black text-slate-900 mb-1">${escapeHtml(q.need || q.project_name || 'Projet')}</h3>
                 <div class="flex items-baseline gap-1">
                     <span class="text-2xl font-black text-slate-900">${parseFloat(q.amount||0).toLocaleString('fr-FR')}</span>
-                    <span class="text-xs font-bold text-slate-400">€ HT</span>
+                    <span class="text-xs font-bold text-slate-400">€ </span>
                 </div>
                 ${q.description ? `<p class="text-xs text-slate-500 mt-2">${escapeHtml(q.description)}</p>` : ''}
+                <a href="/rappel/public/quote-view.php?id=${encodeURIComponent(q.id)}" class="inline-flex items-center gap-1 mt-3 text-[10px] font-black uppercase tracking-widest text-brand-700 hover:text-brand-600 transition-colors">
+                    <i data-lucide="file-text" style="width:12px;height:12px;"></i> Voir devis
+                </a>
             </div>
             <div class="flex border-t border-slate-100">
                 <button onclick="doQuote('${q.id}','refuse')"
@@ -504,6 +546,98 @@ function renderQuotes(quotes) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+function renderExpertNotes(items) {
+    const section = document.getElementById('expert-notes-section');
+    const container = document.getElementById('expert-notes-container');
+    if (!section || !container) return;
+
+    if (!Array.isArray(items) || !items.length) {
+        section.classList.remove('hidden');
+        container.innerHTML = `
+            <div class="bg-white rounded-3xl border border-dashed border-slate-200 p-6 text-center">
+                <p class="text-sm font-black text-slate-900 mb-1">Aucune note disponible pour le moment</p>
+                <p class="text-xs text-slate-500 font-medium">Les notes apparaissent ici quand un expert partenaire ajoute un commentaire sur une demande r&eacute;alis&eacute;e.</p>
+            </div>
+        `;
+        return;
+    }
+
+    section.classList.remove('hidden');
+    container.innerHTML = items.map(provider => {
+        const providerLabel = provider.provider_company || provider.provider_name || 'Expert partenaire';
+        const notes = Array.isArray(provider.notes) ? provider.notes.slice(0, 3) : [];
+        const eligibleLeads = (allRequests || []).filter((r) => {
+            const status = String(r.status || '').toLowerCase();
+            return String(r.assigned_to || '') === String(provider.provider_id || '')
+                && ['completed', 'closed', 'realise'].includes(status);
+        });
+        const alreadyNotedLeadIds = new Set(
+            (allClientPartnerNotes || [])
+                .filter((n) => String(n.provider_id || '') === String(provider.provider_id || ''))
+                .map((n) => String(n.lead_id || ''))
+        );
+        const availableLeads = eligibleLeads.filter((lead) => !alreadyNotedLeadIds.has(String(lead.id || '')));
+
+        return `
+            <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-[#0E1648] text-white flex items-center justify-center font-black text-base flex-shrink-0">
+                        ${escapeHtml((providerLabel || '?').charAt(0).toUpperCase())}
+                    </div>
+                    <div class="min-w-0">
+                        <p class="font-black text-slate-900 text-sm truncate">${escapeHtml(providerLabel)}</p>
+                        ${provider.provider_name && provider.provider_company ? `<p class="text-xs text-slate-500 truncate">${escapeHtml(provider.provider_name)}</p>` : ''}
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    ${notes.length ? notes.map(note => `
+                        <div class="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">
+                                ${escapeHtml(note.lead_sector || 'Projet')} - ${new Date(note.created_at || Date.now()).toLocaleDateString('fr-FR')}
+                            </p>
+                            <p class="text-sm text-slate-700 font-medium">${escapeHtml(note.comment || '')}</p>
+                            ${note.lead_need ? `<p class="text-xs text-slate-500 mt-1">Demande: ${escapeHtml(note.lead_need)}</p>` : ''}
+                        </div>
+                    `).join('') : `<p class="text-sm text-slate-500">Aucune note disponible.</p>`}
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Votre avis sur cet expert</p>
+                    ${availableLeads.length ? `
+                        <form onsubmit="submitClientPartnerNote(event, '${escapeHtml(provider.provider_id || '')}')" class="space-y-2.5">
+                            <select id="client-note-lead-${escapeHtml(provider.provider_id || '')}" class="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
+                                <option value="">Choisir une demande terminee</option>
+                                ${availableLeads.map((lead) => `
+                                    <option value="${escapeHtml(lead.id || '')}">
+                                        ${escapeHtml(lead.sector || 'Projet')} - ${escapeHtml(lead.need || 'Demande')}
+                                    </option>
+                                `).join('')}
+                            </select>
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                                <select id="client-note-rating-${escapeHtml(provider.provider_id || '')}" class="sm:col-span-1 h-10 px-3 rounded-xl border border-slate-200 text-xs font-black text-slate-700">
+                                    <option value="">Note</option>
+                                    <option value="5">5/5</option>
+                                    <option value="4">4/5</option>
+                                    <option value="3">3/5</option>
+                                    <option value="2">2/5</option>
+                                    <option value="1">1/5</option>
+                                </select>
+                                <textarea id="client-note-comment-${escapeHtml(provider.provider_id || '')}" rows="2" class="sm:col-span-3 w-full p-3 rounded-xl border border-slate-200 text-sm font-medium text-slate-700" placeholder="Votre retour sur la prestation..." required></textarea>
+                            </div>
+                            <button type="submit" class="h-9 px-4 rounded-xl bg-brand-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all">
+                                Envoyer ma note
+                            </button>
+                        </form>
+                    ` : `
+                        <p class="text-xs text-slate-500 font-medium">Aucune nouvelle demande terminee a noter pour cet expert.</p>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 async function doQuote(id, action) {
     if (!confirm(action === 'accept' ? 'Valider ce devis ?' : 'Refuser ce devis ?')) return;
     try {
@@ -511,6 +645,88 @@ async function doQuote(id, action) {
         showToast(action === 'accept' ? '✓ Devis validé — l\'expert est notifié' : 'Devis refusé', 'success');
         loadData();
     } catch(e) { showToast(e.message, 'error'); }
+}
+
+function buildProviderDraft(req) {
+    const providerName = (req.provider_name || req.provider_company || 'votre expert').trim();
+    const createdDate = req.created_at ? new Date(req.created_at).toLocaleDateString('fr-FR') : '';
+    const need = (req.need || req.sector || 'ma demande').trim();
+    const subject = `Suivi de ma demande${req.sector ? ' - ' + req.sector : ''}`;
+    const body = [
+        `Bonjour ${providerName},`,
+        '',
+        `Je vous contacte concernant ma demande${createdDate ? ' du ' + createdDate : ''} :`,
+        `"${need}"`,
+        '',
+        'Pouvez-vous me confirmer le statut de mon devis et la suite à prévoir ?',
+        '',
+        'Merci d\'avance,',
+        `${FULL_NAME || 'Client'}`
+    ].join('\n');
+    return { subject, body };
+}
+
+function buildGmailComposeUrl(email, subject, body) {
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function buildOutlookComposeUrl(email, subject, body) {
+    return `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(email)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+async function copyProviderEmail(email) {
+    if (!email) return;
+    try {
+        await navigator.clipboard.writeText(email);
+        showToast('Email de l’expert copié.', 'success');
+    } catch (e) {
+        showToast('Impossible de copier l’email.', 'error');
+    }
+}
+
+function renderProviderActions(req) {
+    if (!req.provider_email && !req.provider_phone) return '';
+    const draft = buildProviderDraft(req);
+    const gmailUrl = req.provider_email ? buildGmailComposeUrl(req.provider_email, draft.subject, draft.body) : '';
+    const outlookUrl = req.provider_email ? buildOutlookComposeUrl(req.provider_email, draft.subject, draft.body) : '';
+    const mailtoUrl = req.provider_email ? `mailto:${encodeURIComponent(req.provider_email)}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}` : '';
+
+    return `
+        <div class="flex flex-wrap items-center gap-2.5">
+            ${req.provider_phone ? `<a href="tel:${escapeHtml(req.provider_phone)}"
+                class="h-9 px-3 bg-white border border-slate-200 rounded-xl inline-flex items-center gap-2 text-slate-700 hover:text-brand-700 hover:border-brand-300 transition-all text-xs font-black tracking-wide" title="${escapeHtml(req.provider_phone)}">
+                <i data-lucide="phone" style="width:13px;height:13px;"></i> Appeler
+            </a>` : ''}
+            ${req.provider_email ? `<a href="${gmailUrl}" target="_blank" rel="noopener noreferrer"
+                class="h-9 px-3 bg-white border border-red-100 rounded-xl inline-flex items-center gap-2 text-slate-700 hover:border-red-300 transition-all text-xs font-black tracking-wide" title="Ouvrir Gmail avec un message prérempli">
+                <svg viewBox="0 0 24 24" style="width:13px;height:13px;" aria-hidden="true">
+                    <path fill="#EA4335" d="M3 6.75A1.75 1.75 0 0 1 4.75 5h14.5A1.75 1.75 0 0 1 21 6.75v10.5A1.75 1.75 0 0 1 19.25 19H4.75A1.75 1.75 0 0 1 3 17.25V6.75Z"/>
+                    <path fill="#FFFFFF" d="M4.5 7.5 12 13l7.5-5.5v9a.5.5 0 0 1-.5.5h-14a.5.5 0 0 1-.5-.5v-9Z"/>
+                    <path fill="#34A853" d="M3 7.2 12 13l9-5.8V6.75A1.75 1.75 0 0 0 19.25 5H4.75A1.75 1.75 0 0 0 3 6.75v.45Z"/>
+                    <path fill="#FBBC05" d="M3 7.2v10.05A1.75 1.75 0 0 0 4.75 19H6V9.15L3 7.2Z"/>
+                    <path fill="#4285F4" d="M21 7.2v10.05A1.75 1.75 0 0 1 19.25 19H18V9.15l3-1.95Z"/>
+                </svg>
+                Gmail
+            </a>` : ''}
+            ${req.provider_email ? `<a href="${outlookUrl}" target="_blank" rel="noopener noreferrer"
+                class="h-9 px-3 bg-white border border-blue-100 rounded-xl inline-flex items-center gap-2 text-slate-700 hover:border-blue-300 transition-all text-xs font-black tracking-wide" title="Ouvrir Outlook avec un message prérempli">
+                <svg viewBox="0 0 24 24" style="width:13px;height:13px;" aria-hidden="true">
+                    <path fill="#0A64C9" d="M13 4h7a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-7V4Z"/>
+                    <path fill="#167EE6" d="M4 6.5a1.5 1.5 0 0 1 1.5-1.5H13v14H5.5A1.5 1.5 0 0 1 4 17.5v-11Z"/>
+                    <path fill="#FFFFFF" d="M8.4 9.2c1.65 0 2.9 1.25 2.9 3.3s-1.25 3.3-2.9 3.3-2.9-1.25-2.9-3.3 1.25-3.3 2.9-3.3Zm0 1.4c-.8 0-1.45.7-1.45 1.9s.65 1.9 1.45 1.9 1.45-.7 1.45-1.9-.65-1.9-1.45-1.9Z"/>
+                </svg>
+                Outlook
+            </a>` : ''}
+            ${req.provider_email ? `<a href="${mailtoUrl}"
+                class="h-9 px-3 bg-white border border-slate-200 rounded-xl inline-flex items-center gap-2 text-slate-700 hover:border-slate-300 transition-all text-xs font-black tracking-wide" title="Ouvrir l’application email par défaut">
+                <i data-lucide="mail" style="width:13px;height:13px;"></i> Email
+            </a>` : ''}
+            ${req.provider_email ? `<button type="button" onclick="copyProviderEmail(decodeURIComponent('${encodeURIComponent(req.provider_email)}'))"
+                class="h-9 px-3 bg-white border border-slate-200 rounded-xl inline-flex items-center gap-2 text-slate-700 hover:border-slate-300 transition-all text-xs font-black tracking-wide" title="Copier l'email expert">
+                <i data-lucide="copy" style="width:13px;height:13px;"></i> Copier email
+            </button>` : ''}
+        </div>
+    `;
 }
 
 /* ===== REQUESTS ===== */
@@ -593,15 +809,9 @@ function renderRequests(reqs) {
                         <p class="font-black text-slate-900 text-sm">${escapeHtml(req.provider_company || req.provider_name)}</p>
                         ${req.provider_name && req.provider_company ? `<p class="text-xs text-slate-500">${escapeHtml(req.provider_name)}</p>` : ''}
                     </div>
-                    <div class="flex gap-2">
-                        ${req.provider_phone ? `<a href="tel:${escapeHtml(req.provider_phone)}"
-                            class="w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:text-brand-600 hover:border-brand-300 transition-all" title="${escapeHtml(req.provider_phone)}">
-                            <i data-lucide="phone" style="width:14px;height:14px;"></i></a>` : ''}
-                        ${req.provider_email ? `<a href="mailto:${escapeHtml(req.provider_email)}"
-                            class="w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:text-brand-600 hover:border-brand-300 transition-all" title="${escapeHtml(req.provider_email)}">
-                            <i data-lucide="mail" style="width:14px;height:14px;"></i></a>` : ''}
-                    </div>
+                    ${renderProviderActions(req)}
                 </div>
+                ${req.provider_email ? `<p class="mt-3 text-[10px] text-slate-400 font-semibold">Message prérempli pour un suivi rapide du devis.</p>` : ''}
             </div>` : ''}
         </div>`;
     }).join('');
@@ -612,6 +822,12 @@ function renderRequests(reqs) {
 function openModal() {
     document.getElementById('modal-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
+    const docInput = document.getElementById('m-doc');
+    if (docInput) docInput.value = '';
+    const dateInput = document.getElementById('m-preferred-date');
+    if (dateInput) dateInput.value = '';
+    const timeInput = document.getElementById('m-preferred-time');
+    if (timeInput) timeInput.value = '';
     goStep(1);
     document.getElementById('modal-success').classList.add('hidden');
     document.getElementById('modal-error').classList.add('hidden');
@@ -699,60 +915,134 @@ window.goStep = function(s) {
 
 /* Submit */
 async function submitRequest() {
-    if (!document.getElementById('m-consent').checked) {
-        showModalError('Veuillez accepter d\'être contacté.');
+    if (!validateStep(1) || !validateStep(2)) {
         return;
     }
+    if (!document.getElementById('m-consent').checked) {
+        showModalError('Veuillez accepter d\'etre contacte.');
+        return;
+    }
+
     const btn = document.getElementById('submit-btn');
     btn.disabled = true;
     btn.innerHTML = '<span style="width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;display:inline-block;animation:spin 1s linear infinite;"></span>';
 
-    const payload = {
-        first_name:   document.getElementById('m-firstname').value.trim(),
-        last_name:    document.getElementById('m-lastname').value.trim(),
-        phone:        document.getElementById('m-phone').value.trim(),
-        email:        '<?= addslashes($user['email'] ?? '') ?>',
-        service_type: selectedSectorID,
-        need:         document.getElementById('m-need').value.trim(),
-        budget:       parseInt(document.getElementById('m-budget').value),
-        time_slot:    selectedSlot,
-        address:      document.getElementById('m-address').value.trim(),
-        zip_code:     document.getElementById('m-zip').value.trim(),
-        city:         document.getElementById('m-city').value.trim(),
-    };
-
-    try {
-        await apiFetch('/leads', { method: 'POST', body: JSON.stringify(payload) });
-        // Show success
-        [1,2,3].forEach(n => document.getElementById(`modal-step-${n}`).classList.add('hidden'));
-        document.getElementById('modal-success').classList.remove('hidden');
-        document.getElementById('modal-subtitle').textContent = 'Demande envoyée avec succès !';
-    } catch(e) {
-        showModalError(e.message || 'Erreur lors de l\'envoi.');
+    const firstName = document.getElementById('m-firstname').value.trim();
+    const lastName = document.getElementById('m-lastname').value.trim();
+    const fullName = `${firstName} ${lastName}`.trim() || FULL_NAME || 'Client';
+    const phoneValue = document.getElementById('m-phone').value.trim() || '<?= addslashes($user['phone'] ?? '') ?>';
+    if (!phoneValue) {
+        showModalError('Telephone requis.');
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="send" style="width:15px;height:15px;"></i> Envoyer';
         if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    const preferredTime = document.getElementById('m-preferred-time').value || '';
+    const finalTimeSlot = preferredTime ? `Heure precise (${preferredTime})` : (selectedSlot || '');
+    const payload = {
+        name: fullName,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phoneValue,
+        email: '<?= addslashes($user['email'] ?? '') ?>',
+        service_type: selectedSectorID,
+        need: document.getElementById('m-need').value.trim(),
+        budget: parseInt(document.getElementById('m-budget').value, 10) || 0,
+        time_slot: finalTimeSlot,
+        preferred_date: document.getElementById('m-preferred-date').value || '',
+        address: document.getElementById('m-address').value.trim(),
+        zip_code: document.getElementById('m-zip').value.trim(),
+        city: document.getElementById('m-city').value.trim(),
+    };
+
+    const docFile = document.getElementById('m-doc').files[0];
+    const withTimeout = (promise, timeoutMs = 25000) => Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('La requete prend trop de temps. Merci de reessayer.')), timeoutMs))
+    ]);
+
+    try {
+        if (docFile) {
+            const formData = new FormData();
+            Object.entries(payload).forEach(([k, v]) => formData.append(k, String(v ?? '')));
+            formData.append('doc', docFile);
+            await withTimeout(apiFetch('/leads', { method: 'POST', body: formData }));
+        } else {
+            await withTimeout(apiFetch('/leads', { method: 'POST', body: JSON.stringify(payload) }));
+        }
+        [1,2,3].forEach(n => document.getElementById(`modal-step-${n}`).classList.add('hidden'));
+        document.getElementById('modal-success').classList.remove('hidden');
+        document.getElementById('modal-subtitle').textContent = 'Demande envoyee avec succes !';
+    } catch(e) {
+        showModalError(e.message || 'Erreur lors de l\'envoi.');
+    } finally {
+        const successVisible = !document.getElementById('modal-success').classList.contains('hidden');
+        if (!successVisible) {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="send" style="width:15px;height:15px;"></i> Envoyer';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
     }
 }
 
 /* ===== Helpers ===== */
 function getStep(status) {
     const s = (status||'').toLowerCase();
-    if (s==='completed'||s==='closed')   return {current:4, percent:100};
-    if (s==='confirmé'||s==='signe')     return {current:3, percent:66};
+    if (s==='completed'||s==='closed'||s==='realise')   return {current:4, percent:100};
+    if (s==='accepted'||s==='signe'||s==='confirmed'||s.startsWith('confirm')) return {current:3, percent:66};
     if (s==='assigned'||s==='assigne'||s==='processed') return {current:2, percent:33};
     return {current:1, percent:5};
 }
+
+async function submitClientPartnerNote(event, providerId) {
+    event.preventDefault();
+    const leadEl = document.getElementById(`client-note-lead-${providerId}`);
+    const ratingEl = document.getElementById(`client-note-rating-${providerId}`);
+    const commentEl = document.getElementById(`client-note-comment-${providerId}`);
+    if (!leadEl || !commentEl) return;
+
+    const leadId = String(leadEl.value || '').trim();
+    const comment = String(commentEl.value || '').trim();
+    const rating = String((ratingEl && ratingEl.value) || '').trim();
+
+    if (!leadId) {
+        showToast('Choisissez une demande terminee.', 'warning');
+        return;
+    }
+    if (!comment) {
+        showToast('Ajoutez un commentaire.', 'warning');
+        return;
+    }
+
+    try {
+        await apiFetch('/feedback/client', {
+            method: 'POST',
+            body: JSON.stringify({
+                lead_id: leadId,
+                rating: rating || null,
+                comment
+            })
+        });
+        showToast('Votre note a ete envoyee.', 'success');
+        await loadData();
+    } catch (e) {
+        showToast(e.message || "Impossible d'envoyer la note.", 'error');
+    }
+}
 function getStatusLabel(s) {
-    return ({pending:'En attente', assigned:'Assigné', assigne:'Assigné', processed:'En traitement',
-             confirmé:'Devis validé', closed:'Terminé', completed:'Terminé', cancelled:'Annulé'}
-    )[(s||'').toLowerCase()] || s || '—';
+    const k = (s||'').toLowerCase();
+    if (k==='accepted'||k==='signe'||k==='confirmed'||k.startsWith('confirm')) return 'Devis valid\u00e9';
+    return ({pending:'En attente', assigned:'Assign\u00e9', assigne:'Assign\u00e9', processed:'En traitement',
+             closed:'Termin\u00e9', completed:'R\u00e9alis\u00e9', realise:'R\u00e9alis\u00e9', envoye:'Devis envoy\u00e9', quote_sent:'Devis envoy\u00e9', cancelled:'Annul\u00e9'} 
+    )[k] || s || '-';
 }
 function getStatusCls(s) {
     const m = (s||'').toLowerCase();
-    if (m==='closed'||m==='completed') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+    if (m==='closed'||m==='completed'||m==='realise') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
     if (m==='cancelled')               return 'bg-red-50 text-red-500 border-red-100';
-    if (m==='confirmé'||m==='signe')   return 'bg-brand-50 text-brand-600 border-brand-100';
+    if (m==='accepted'||m==='signe'||m==='confirmed'||m.startsWith('confirm')||m==='envoye'||m==='quote_sent') return 'bg-brand-50 text-brand-600 border-brand-100';
     if (m==='processed'||m==='assigned'||m==='assigne') return 'bg-amber-50 text-amber-600 border-amber-100';
     return 'bg-slate-50 text-slate-400 border-slate-200';
 }
@@ -768,12 +1058,10 @@ function getStatusCls(s) {
         <i data-lucide="list" style="width:24px;height:24px;"></i>
         <span>Demandes</span>
     </a>
-    <div class="flex-1 relative flex justify-center">
-        <button onclick="openModal()" class="absolute -top-10 w-16 h-16 bg-[#0E1648] rounded-3xl flex items-center justify-center shadow-2xl shadow-brand-900/40 active:scale-90 transition-all group">
-            <i data-lucide="plus" class="text-white group-hover:scale-125 transition-transform" style="width:32px;height:32px;"></i>
-        </button>
-        <span class="text-[0.65rem] font-black text-slate-400 uppercase tracking-widest mt-8">Nouveau</span>
-    </div>
+    <a href="/rappel/public/client/quotes.php" class="bnav-btn">
+        <i data-lucide="file-text" style="width:24px;height:24px;"></i>
+        <span>Devis</span>
+    </a>
     <a href="/rappel/public/client/settings.php" class="bnav-btn">
         <i data-lucide="settings" style="width:24px;height:24px;"></i>
         <span>Profil</span>
@@ -788,3 +1076,6 @@ function getStatusCls(s) {
 <?php include __DIR__ . '/../includes/cookie_banner.php'; ?>
 </body>
 </html>
+
+
+

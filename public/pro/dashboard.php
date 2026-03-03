@@ -98,6 +98,16 @@ $token = getToken();
                 <?php endforeach; ?>
             </div>
         </div>
+
+        <div class="glass-card rounded-[3rem] p-8 border-white/40 shadow-premium bg-white/35 backdrop-blur-3xl">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-sm font-black text-navy-950 uppercase tracking-widest">Avis clients</h2>
+                <span class="text-[10px] font-black text-navy-400 uppercase tracking-widest">Recent</span>
+            </div>
+            <div id="provider-client-notes" class="space-y-3">
+                <div class="text-xs font-bold text-navy-400">Chargement...</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -111,20 +121,23 @@ const PHP_TOKEN = '__PHP_TOKEN__';
 async function loadDashboard() {
     try {
         if (PHP_TOKEN) Auth.setToken(PHP_TOKEN);
-        const [stats, leads, quotes] = await Promise.all([
+        const [stats, leads, quotes, clientNotes] = await Promise.all([
             apiFetch('/stats'),
             apiFetch('/leads'),
             apiFetch('/quotes'),
+            apiFetch('/feedback/provider'),
         ]);
 
         renderStats(stats || {});
         renderRecentLeads(Array.isArray(leads) ? leads : []);
         renderRecentQuotes(Array.isArray(quotes) ? quotes : []);
         renderRecentClients(Array.isArray(quotes) ? quotes.filter(q => q.status === 'accepted' || q.status === 'signe') : []);
+        renderProviderClientNotes(Array.isArray(clientNotes) ? clientNotes : []);
     } catch (err) {
         console.error('Dashboard load error:', err);
         renderStats({});
         renderRecentLeads([]);
+        renderProviderClientNotes([]);
     }
 }
 
@@ -263,7 +276,7 @@ function renderRecentQuotes(quotes) {
     el.innerHTML = `<div class="grid grid-cols-1 gap-5 animate-fade-in max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">${quotes.map((q, idx) => `
         <div class="group flex items-center gap-6 p-6 rounded-[2rem] bg-white/40 hover:bg-white hover:shadow-xl hover:shadow-navy-950/5 border border-white transition-all duration-500 cursor-pointer animate-fade-in-up" 
              style="animation-delay: ${idx * 100}ms"
-             onclick="window.location='/rappel/public/pro/quotes.php'">
+             onclick="window.location='/rappel/public/quote-view.php?id=${encodeURIComponent(q.id)}'">
             <div class="w-16 h-16 rounded-2xl bg-accent-50 text-accent-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-500">
                 <i data-lucide="file-text" style="width:28px;height:28px;"></i>
             </div>
@@ -321,6 +334,34 @@ function renderRecentClients(clients) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+function renderProviderClientNotes(items) {
+    const el = document.getElementById('provider-client-notes');
+    if (!el) return;
+
+    if (!Array.isArray(items) || !items.length) {
+        el.innerHTML = `<div class="rounded-2xl border border-dashed border-navy-200 p-4 text-center">
+            <p class="text-xs font-bold text-navy-400">Aucun avis client pour le moment.</p>
+        </div>`;
+        return;
+    }
+
+    el.innerHTML = items.slice(0, 5).map((note) => {
+        const name = `${note.client_first_name || ''} ${note.client_last_name || ''}`.trim() || note.client_email || 'Client';
+        const stars = Number(note.rating || 0);
+        const starsLabel = stars > 0 ? `${Math.min(stars, 5)}/5` : 'Sans note';
+        return `
+            <div class="rounded-2xl bg-white/60 border border-white p-4">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <p class="text-xs font-black text-navy-900 uppercase tracking-widest truncate">${escapeHtml(name)}</p>
+                    <span class="text-[11px] font-black text-amber-500">${escapeHtml(starsLabel)}</span>
+                </div>
+                <p class="text-xs text-navy-500 font-bold mb-1">${escapeHtml(note.lead_sector || 'Projet')} - ${new Date(note.created_at || Date.now()).toLocaleDateString('fr-FR')}</p>
+                <p class="text-sm text-navy-700 font-medium">${escapeHtml(note.comment || '')}</p>
+            </div>
+        `;
+    }).join('');
+}
+
 document.addEventListener('DOMContentLoaded', loadDashboard);
 </script>
 JS;
@@ -328,4 +369,3 @@ $extraScript = str_replace('__PHP_TOKEN__', $safeToken, $extraScript);
 ?>
 
 <?php include __DIR__ . '/../includes/dashboard_layout_bottom.php'; ?>
-

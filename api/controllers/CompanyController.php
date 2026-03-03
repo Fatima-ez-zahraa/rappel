@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'config/db.php';
 require_once 'models/Lead.php';
 require_once 'models/Quote.php';
@@ -18,6 +18,9 @@ class CompanyController {
     private $cacheExpiry = 86400; // 24 hours
     private $kipocedApiKey = 'wa05ila67f2003a40c02f0flv43ax3a1';
     private $kipocedBaseUrl = 'https://api.kipoced.com/v1/listeEven';
+    private static $quoteDocColumnChecked = false;
+    private static $quoteDocsTableChecked = false;
+    private static $clientPartnerNotesTableChecked = false;
     
     public function __construct()
     {
@@ -28,6 +31,33 @@ class CompanyController {
         $this->user = new User($this->db);
         $this->invoice = new Invoice($this->db);
         $this->jwt = new JwtUtils();
+        $this->ensureLeadColumns();
+        $this->ensureQuoteDocColumn();
+        $this->ensureQuoteDocumentsTable();
+        $this->ensureClientPartnerNotesTable();
+    }
+
+    private function ensureLeadColumns()
+    {
+        try {
+            $columns = [
+                'zip_code' => "ALTER TABLE leads ADD COLUMN zip_code VARCHAR(20) NULL AFTER address",
+                'city' => "ALTER TABLE leads ADD COLUMN city VARCHAR(100) NULL AFTER zip_code",
+                'user_id' => "ALTER TABLE leads ADD COLUMN user_id CHAR(36) NULL AFTER city",
+                'time_slot' => "ALTER TABLE leads ADD COLUMN time_slot VARCHAR(100) NULL AFTER budget",
+                'preferred_date' => "ALTER TABLE leads ADD COLUMN preferred_date DATE NULL AFTER time_slot",
+                'doc_path' => "ALTER TABLE leads ADD COLUMN doc_path VARCHAR(500) NULL AFTER preferred_date"
+            ];
+
+            foreach ($columns as $name => $sql) {
+                $stmt = $this->db->query("SHOW COLUMNS FROM leads LIKE '{$name}'");
+                if (!$stmt || !$stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $this->db->exec($sql);
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Unable to ensure leads columns (CompanyController): " . $e->getMessage());
+        }
     }
 
     /**
@@ -63,10 +93,76 @@ class CompanyController {
      */
     public function getQuotes() {
         $auth = $this->authenticate();
-        // Return ALL quotes for providers as requested
-        $stmt = $this->quote->readAll();
+        if (($auth['role'] ?? '') !== 'provider') {
+            http_response_code(403);
+            echo json_encode(["error" => "Accès refusé"]);
+            return;
+        }
+        $stmt = $this->quote->readByProvider($auth['id']);
         $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->attachDocumentsToQuotes($quotes);
         echo json_encode($quotes);
+    }
+
+    public function getQuoteById($id) {
+        $auth = $this->authenticate();
+        $role = (string)($auth['role'] ?? '');
+
+        if ($role === 'provider') {
+            $stmt = $this->quote->readByProvider($auth['id']);
+            $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $this->attachDocumentsToQuotes($quotes);
+            foreach ($quotes as $q) {
+                if ((string)($q['id'] ?? '') === (string)$id) {
+                    echo json_encode($q);
+                    return;
+                }
+            }
+            http_response_code(404);
+            echo json_encode(["error" => "Devis non trouvé"]);
+            return;
+        }
+
+        if ($role === 'client') {
+            $this->backfillClientLeadOwnershipByEmail($auth['id']);
+            $this->backfillOrphanQuotesForClient($auth['id']);
+            $stmt = $this->quote->readByClient($auth['id']);
+            $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $this->attachDocumentsToQuotes($quotes);
+            foreach ($quotes as $q) {
+                if ((string)($q['id'] ?? '') === (string)$id) {
+                    echo json_encode($q);
+                    return;
+                }
+            }
+            http_response_code(404);
+            echo json_encode(["error" => "Devis non trouvé"]);
+            return;
+        }
+
+        if ($role === 'admin') {
+            $stmt = $this->db->prepare("
+                SELECT q.*, l.need, up.company_name as provider_company
+                FROM quotes q
+                LEFT JOIN leads l ON q.lead_id = l.id
+                LEFT JOIN user_profiles up ON q.provider_id = up.id
+                WHERE q.id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$id]);
+            $quote = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($quote) {
+                $this->attachDocumentsToQuote($quote);
+                echo json_encode($quote);
+                return;
+            }
+            http_response_code(404);
+            echo json_encode(["error" => "Devis non trouvé"]);
+            return;
+        }
+
+        http_response_code(403);
+        echo json_encode(["error" => "Accès refusé"]);
     }
 
     /**
@@ -74,9 +170,21 @@ class CompanyController {
      */
     public function createQuote() {
         $auth = $this->authenticate();
-        $data = json_decode(file_get_contents("php://input"));
+        if (($auth['role'] ?? '') !== 'provider') {
+            http_response_code(403);
+            echo json_encode(["error" => "Accès refusé"]);
+            return;
+        }
+        try {
+            $data = $this->parseRequestPayload();
+            $docPaths = $this->handleQuoteDocUploads($auth['id']);
+        } catch (RuntimeException $e) {
+            http_response_code(400);
+            echo json_encode(["error" => $e->getMessage()]);
+            return;
+        }
         
-        if (empty($data->client_name) || empty($data->amount)) {
+        if (empty($data['client_name']) || empty($data['amount'])) {
             http_response_code(400);
             echo json_encode(["error" => "Données incomplètes"]);
             return;
@@ -84,21 +192,23 @@ class CompanyController {
 
         $this->quote->id = $this->generateUuid();
         $this->quote->provider_id = $auth['id'];
-        $this->quote->client_name = $data->client_name;
-        $this->quote->project_name = $data->project_name ?? ($data->description ?? 'Nouveau Projet');
-        $this->quote->amount = $data->amount;
-        $this->quote->items_count = $data->items_count ?? 1;
-        $this->quote->status = $data->status ?? 'attente_client';
-        $this->quote->lead_id = $data->lead_id ?? null;
+        $this->quote->client_name = $data['client_name'];
+        $this->quote->project_name = $data['project_name'] ?? ($data['description'] ?? 'Nouveau Projet');
+        $this->quote->amount = $data['amount'];
+        $this->quote->items_count = $data['items_count'] ?? 1;
+        $this->quote->status = $this->normalizeQuoteStatus($data['status'] ?? 'attente_client');
+        $this->quote->lead_id = !empty($data['lead_id']) ? $data['lead_id'] : null;
+        $this->quote->doc_path = !empty($docPaths) ? ($docPaths[0] ?? null) : null;
 
         if ($this->quote->create()) {
-            // Also update lead status to quote_sent
-            if (!empty($data->lead_id)) {
-                $updLead = $this->db->prepare("UPDATE leads SET status = 'quote_sent' WHERE id = ?");
-                $updLead->execute([$data->lead_id]);
+            if (!empty($docPaths)) {
+                $this->saveQuoteDocuments($this->quote->id, $docPaths);
+            }
+            if (!empty($data['lead_id'])) {
+                $this->syncLeadStatusFromQuoteStatus($data['lead_id'], $this->quote->status);
             }
             http_response_code(201);
-            echo json_encode(["message" => "Devis créé", "id" => $this->quote->id]);
+            echo json_encode(["message" => "Devis créé", "id" => $this->quote->id, "doc_path" => $this->quote->doc_path, "docs_count" => count($docPaths)]);
         } else {
             http_response_code(503);
             echo json_encode(["error" => "Erreur lors de la création du devis"]);
@@ -108,7 +218,19 @@ class CompanyController {
     public function updateQuote($id)
     {
         $auth = $this->authenticate();
-        $data = json_decode(file_get_contents("php://input"));
+        if (($auth['role'] ?? '') !== 'provider') {
+            http_response_code(403);
+            echo json_encode(["error" => "Accès refusé"]);
+            return;
+        }
+        try {
+            $data = $this->parseRequestPayload();
+            $uploadedDocPaths = $this->handleQuoteDocUploads($auth['id']);
+        } catch (RuntimeException $e) {
+            http_response_code(400);
+            echo json_encode(["error" => $e->getMessage()]);
+            return;
+        }
 
         if (!$data) {
             http_response_code(400);
@@ -125,15 +247,36 @@ class CompanyController {
             return;
         }
 
-        $this->quote->client_name = $data->client_name ?? $this->quote->client_name;
-        $this->quote->project_name = $data->project_name ?? ($data->description ?? $this->quote->project_name);
-        $this->quote->amount = $data->amount ?? $this->quote->amount;
-        $this->quote->items_count = $data->items_count ?? $this->quote->items_count;
-        $this->quote->status = $data->status ?? $this->quote->status;
-        $this->quote->lead_id = $data->lead_id ?? $this->quote->lead_id;
+        $removeDocPaths = $this->parseRemoveDocPaths($data);
+        $this->quote->client_name = $data['client_name'] ?? $this->quote->client_name;
+        $this->quote->project_name = $data['project_name'] ?? ($data['description'] ?? $this->quote->project_name);
+        $this->quote->amount = $data['amount'] ?? $this->quote->amount;
+        $this->quote->items_count = $data['items_count'] ?? $this->quote->items_count;
+        $this->quote->status = $this->normalizeQuoteStatus($data['status'] ?? $this->quote->status);
+        $this->quote->lead_id = array_key_exists('lead_id', $data) ? ($data['lead_id'] ?: null) : $this->quote->lead_id;
+        $existingDocs = $this->getQuoteDocumentPaths($id);
+        if (!empty($this->quote->doc_path)) {
+            $existingDocs[] = (string)$this->quote->doc_path;
+        }
+        $existingDocs = array_values(array_unique(array_filter($existingDocs)));
+        $remainingDocs = array_values(array_diff($existingDocs, $removeDocPaths));
+        $newPrimaryDocPath = !empty($remainingDocs) ? $remainingDocs[0] : null;
+        if (!empty($uploadedDocPaths) && empty($newPrimaryDocPath)) {
+            $newPrimaryDocPath = $uploadedDocPaths[0] ?? null;
+        }
+        $this->quote->doc_path = $newPrimaryDocPath;
 
         if ($this->quote->update()) {
-            echo json_encode(["message" => "Devis mis à jour"]);
+            if (!empty($removeDocPaths)) {
+                $this->removeQuoteDocuments($id, $removeDocPaths);
+            }
+            if (!empty($uploadedDocPaths)) {
+                $this->saveQuoteDocuments($id, $uploadedDocPaths);
+            }
+            if (!empty($this->quote->lead_id)) {
+                $this->syncLeadStatusFromQuoteStatus($this->quote->lead_id, $this->quote->status);
+            }
+            echo json_encode(["message" => "Devis mis à jour", "docs_count" => count($uploadedDocPaths)]);
         } else {
             http_response_code(503);
             echo json_encode(["error" => "Erreur lors de la mise à jour du devis"]);
@@ -143,10 +286,24 @@ class CompanyController {
     public function deleteQuote($id)
     {
         $auth = $this->authenticate();
+        if (($auth['role'] ?? '') !== 'provider') {
+            http_response_code(403);
+            echo json_encode(["error" => "Accès refusé"]);
+            return;
+        }
         $this->quote->id = $id;
         $this->quote->provider_id = $auth['id'];
 
+        $docPaths = $this->getQuoteDocumentPaths($id);
+        if ($this->quote->readOne() && !empty($this->quote->doc_path)) {
+            $docPaths[] = (string)$this->quote->doc_path;
+        }
+        $docPaths = array_values(array_unique(array_filter($docPaths)));
         if ($this->quote->delete()) {
+            $this->deleteQuoteDocumentsByQuoteId($id);
+            foreach ($docPaths as $path) {
+                $this->deleteQuoteDocByPublicPath($path);
+            }
             echo json_encode(["message" => "Devis supprimé"]);
         } else {
             http_response_code(503);
@@ -240,7 +397,7 @@ class CompanyController {
         $sectorStmt = $this->db->prepare("
             SELECT l.sector, 
                    COUNT(*) as total,
-                   SUM(CASE WHEN l.status IN ('processed', 'confirmé', 'completed') THEN 1 ELSE 0 END) as processed
+                   SUM(CASE WHEN l.status IN ('processed', 'confirmed', 'confirmé', 'completed') THEN 1 ELSE 0 END) as processed
             FROM leads l
             INNER JOIN lead_assignments la ON l.id = la.lead_id
             WHERE la.provider_id = ?
@@ -551,18 +708,25 @@ class CompanyController {
             echo json_encode(['error' => 'Forbidden']);
             return;
         }
+        $this->backfillClientLeadOwnershipByEmail($auth['id']);
+        $this->backfillOrphanQuotesForClient($auth['id']);
 
         // Active requests (status = pending/assigned)
         $stmt = $this->db->prepare("SELECT COUNT(*) FROM leads WHERE user_id = ? AND status IN ('pending', 'assigned')");
         $stmt->execute([$auth['id']]);
         $activeRequests = $stmt->fetchColumn();
 
-        // Pending quotes
-        $stmt = $this->db->prepare("SELECT COUNT(*) FROM quotes q 
-                                   INNER JOIN leads l ON q.lead_id = l.id 
-                                   WHERE l.user_id = ? AND q.status = 'attente_client'");
-        $stmt->execute([$auth['id']]);
-        $pendingQuotes = $stmt->fetchColumn();
+        // Quotes linked to this client (robust matching, same scope as /client/quotes)
+        $quotesStmt = $this->quote->readByClient($auth['id']);
+        $quotes = $quotesStmt->fetchAll(PDO::FETCH_ASSOC);
+        $totalQuotes = count($quotes);
+        $pendingQuotes = 0;
+        foreach ($quotes as $q) {
+            $status = strtolower(trim((string)($q['status'] ?? '')));
+            if ($status === 'attente_client' || $status === 'draft' || $status === 'sent') {
+                $pendingQuotes++;
+            }
+        }
 
         // Completed interventions
         $stmt = $this->db->prepare("SELECT COUNT(*) FROM leads WHERE user_id = ? AND status = 'completed'");
@@ -572,6 +736,7 @@ class CompanyController {
         echo json_encode([
             "active_requests" => $activeRequests,
             "pending_quotes" => $pendingQuotes,
+            "total_quotes" => $totalQuotes,
             "completed_interventions" => $completedInterventions
         ]);
     }
@@ -659,10 +824,316 @@ class CompanyController {
             echo json_encode(['error' => 'Forbidden']);
             return;
         }
+        $this->backfillClientLeadOwnershipByEmail($auth['id']);
+        $this->backfillOrphanQuotesForClient($auth['id']);
 
         $stmt = $this->quote->readByClient($auth['id']);
         $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->attachDocumentsToQuotes($quotes);
         echo json_encode($quotes);
+    }
+
+    public function getClientExpertNotes() {
+        $auth = $this->authenticate();
+        if ($auth['role'] !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        $this->backfillClientLeadOwnershipByEmail($auth['id']);
+        $this->backfillOrphanQuotesForClient($auth['id']);
+
+        try {
+            $tableCheck = $this->db->query("SHOW TABLES LIKE 'lead_interactions'");
+            if (!$tableCheck || !$tableCheck->fetch(PDO::FETCH_ASSOC)) {
+                echo json_encode([]);
+                return;
+            }
+
+            $query = "
+                SELECT 
+                    li.id AS note_id,
+                    li.comment,
+                    li.created_at AS note_created_at,
+                    l.id AS lead_id,
+                    l.need,
+                    l.sector,
+                    l.status AS lead_status,
+                    l.created_at AS lead_created_at,
+                    up.id AS provider_id,
+                    up.first_name AS provider_first_name,
+                    up.last_name AS provider_last_name,
+                    up.company_name AS provider_company_name,
+                    up.email AS provider_email,
+                    up.phone AS provider_phone
+                FROM lead_interactions li
+                INNER JOIN leads l ON l.id = li.lead_id
+                INNER JOIN lead_assignments la ON la.lead_id = l.id AND la.provider_id = li.provider_id
+                LEFT JOIN user_profiles up ON up.id = li.provider_id
+                WHERE l.user_id = ?
+                  AND l.status IN ('completed', 'closed')
+                ORDER BY li.created_at DESC
+            ";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$auth['id']]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($rows)) {
+                echo json_encode([]);
+                return;
+            }
+
+            $byProvider = [];
+            foreach ($rows as $row) {
+                $providerId = (string)($row['provider_id'] ?? '');
+                if ($providerId === '') {
+                    continue;
+                }
+
+                if (!isset($byProvider[$providerId])) {
+                    $providerName = trim((string)(($row['provider_first_name'] ?? '') . ' ' . ($row['provider_last_name'] ?? '')));
+                    if ($providerName === '') {
+                        $providerName = (string)($row['provider_company_name'] ?? 'Expert partenaire');
+                    }
+
+                    $byProvider[$providerId] = [
+                        'provider_id' => $providerId,
+                        'provider_name' => $providerName,
+                        'provider_company' => (string)($row['provider_company_name'] ?? ''),
+                        'provider_email' => (string)($row['provider_email'] ?? ''),
+                        'provider_phone' => (string)($row['provider_phone'] ?? ''),
+                        'latest_note_at' => (string)($row['note_created_at'] ?? ''),
+                        'notes' => []
+                    ];
+                }
+
+                $byProvider[$providerId]['notes'][] = [
+                    'id' => (string)($row['note_id'] ?? ''),
+                    'comment' => (string)($row['comment'] ?? ''),
+                    'created_at' => (string)($row['note_created_at'] ?? ''),
+                    'lead_id' => (string)($row['lead_id'] ?? ''),
+                    'lead_need' => (string)($row['need'] ?? ''),
+                    'lead_sector' => (string)($row['sector'] ?? ''),
+                    'lead_status' => (string)($row['lead_status'] ?? ''),
+                    'lead_created_at' => (string)($row['lead_created_at'] ?? '')
+                ];
+            }
+
+            $payload = array_values($byProvider);
+            usort($payload, function ($a, $b) {
+                return strcmp((string)($b['latest_note_at'] ?? ''), (string)($a['latest_note_at'] ?? ''));
+            });
+
+            echo json_encode($payload);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => "Erreur lors du chargement des notes experts."]);
+        }
+    }
+
+    public function createClientPartnerNote() {
+        $auth = $this->authenticate();
+        if (($auth['role'] ?? '') !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        $this->backfillClientLeadOwnershipByEmail($auth['id']);
+        $data = $this->parseRequestPayload();
+
+        $leadId = trim((string)($data['lead_id'] ?? ''));
+        $comment = trim((string)($data['comment'] ?? ''));
+        $ratingRaw = $data['rating'] ?? null;
+        $rating = null;
+        if ($ratingRaw !== null && $ratingRaw !== '') {
+            $rating = (int)$ratingRaw;
+            if ($rating < 1 || $rating > 5) {
+                http_response_code(400);
+                echo json_encode(['error' => 'La note doit etre comprise entre 1 et 5.']);
+                return;
+            }
+        }
+
+        if ($leadId === '' || $comment === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Lead et commentaire requis.']);
+            return;
+        }
+
+        if (strlen($comment) > 2000) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Le commentaire est trop long (max 2000 caracteres).']);
+            return;
+        }
+
+        try {
+            $ownerStmt = $this->db->prepare("
+                SELECT l.id, l.status, la.provider_id
+                FROM leads l
+                INNER JOIN lead_assignments la ON la.lead_id = l.id
+                WHERE l.id = ? AND l.user_id = ?
+                LIMIT 1
+            ");
+            $ownerStmt->execute([$leadId, $auth['id']]);
+            $lead = $ownerStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$lead) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Demande introuvable ou non attribuee.']);
+                return;
+            }
+
+            $leadStatus = strtolower(trim((string)($lead['status'] ?? '')));
+            if (!in_array($leadStatus, ['completed', 'closed', 'realise', 'réalisé'], true)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Vous pouvez noter ce partenaire uniquement sur une demande terminee.']);
+                return;
+            }
+
+            $insert = $this->db->prepare("
+                INSERT INTO client_partner_notes (id, lead_id, client_id, provider_id, rating, comment)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $ok = $insert->execute([
+                $this->generateUuid(),
+                $leadId,
+                $auth['id'],
+                (string)$lead['provider_id'],
+                $rating,
+                $comment
+            ]);
+
+            if (!$ok) {
+                http_response_code(500);
+                echo json_encode(['error' => "Erreur lors de l'enregistrement de la note."]);
+                return;
+            }
+
+            http_response_code(201);
+            echo json_encode(['message' => 'Votre note a ete enregistree.']);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => "Erreur lors de l'enregistrement de la note client."]);
+        }
+    }
+
+    public function getClientPartnerNotes() {
+        $auth = $this->authenticate();
+        if (($auth['role'] ?? '') !== 'client') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        $this->backfillClientLeadOwnershipByEmail($auth['id']);
+
+        try {
+            $stmt = $this->db->prepare("
+                SELECT 
+                    n.id,
+                    n.lead_id,
+                    n.provider_id,
+                    n.rating,
+                    n.comment,
+                    n.created_at,
+                    l.need AS lead_need,
+                    l.sector AS lead_sector,
+                    up.first_name AS provider_first_name,
+                    up.last_name AS provider_last_name,
+                    up.company_name AS provider_company_name
+                FROM client_partner_notes n
+                INNER JOIN leads l ON l.id = n.lead_id AND l.user_id = ?
+                LEFT JOIN user_profiles up ON up.id = n.provider_id
+                ORDER BY n.created_at DESC
+            ");
+            $stmt->execute([$auth['id']]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($rows);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Erreur lors du chargement de vos notes partenaires.']);
+        }
+    }
+
+    public function getProviderClientNotes() {
+        $auth = $this->authenticate();
+        if (($auth['role'] ?? '') !== 'provider') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        try {
+            $stmt = $this->db->prepare("
+                SELECT
+                    n.id,
+                    n.lead_id,
+                    n.rating,
+                    n.comment,
+                    n.created_at,
+                    l.need AS lead_need,
+                    l.sector AS lead_sector,
+                    l.status AS lead_status,
+                    up.id AS client_id,
+                    up.first_name AS client_first_name,
+                    up.last_name AS client_last_name,
+                    up.email AS client_email
+                FROM client_partner_notes n
+                INNER JOIN leads l ON l.id = n.lead_id
+                LEFT JOIN user_profiles up ON up.id = n.client_id
+                WHERE n.provider_id = ?
+                ORDER BY n.created_at DESC
+                LIMIT 100
+            ");
+            $stmt->execute([$auth['id']]);
+            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Erreur lors du chargement des notes clients.']);
+        }
+    }
+
+    public function getAdminClientPartnerNotes() {
+        $auth = $this->authenticate();
+        if (($auth['role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            return;
+        }
+
+        try {
+            $stmt = $this->db->query("
+                SELECT
+                    n.id,
+                    n.lead_id,
+                    n.client_id,
+                    n.provider_id,
+                    n.rating,
+                    n.comment,
+                    n.created_at,
+                    l.need AS lead_need,
+                    l.sector AS lead_sector,
+                    l.status AS lead_status,
+                    c.first_name AS client_first_name,
+                    c.last_name AS client_last_name,
+                    c.email AS client_email,
+                    p.first_name AS provider_first_name,
+                    p.last_name AS provider_last_name,
+                    p.company_name AS provider_company_name
+                FROM client_partner_notes n
+                LEFT JOIN leads l ON l.id = n.lead_id
+                LEFT JOIN user_profiles c ON c.id = n.client_id
+                LEFT JOIN user_profiles p ON p.id = n.provider_id
+                ORDER BY n.created_at DESC
+                LIMIT 200
+            ");
+            echo json_encode($stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : []);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Erreur lors du chargement des notes clients.']);
+        }
     }
 
     public function acceptQuote($id) {
@@ -672,6 +1143,8 @@ class CompanyController {
             echo json_encode(['error' => 'Forbidden']);
             return;
         }
+        $this->backfillClientLeadOwnershipByEmail($auth['id']);
+        $this->backfillOrphanQuotesForClient($auth['id']);
 
         $this->quote->id = $id;
         // Verify quote belongs to client
@@ -692,7 +1165,7 @@ class CompanyController {
         }
 
         // Update status to 'signe'
-        $query = "UPDATE quotes SET status = 'signe' WHERE id = ?";
+        $query = "UPDATE quotes SET status = 'accepted' WHERE id = ?";
         $stmt = $this->db->prepare($query);
         if ($stmt->execute([$id])) {
             // Also update lead status to confirmed
@@ -700,8 +1173,7 @@ class CompanyController {
             $quoteData->execute([$id]);
             $leadId = $quoteData->fetchColumn();
             if ($leadId) {
-                $updLead = $this->db->prepare("UPDATE leads SET status = 'confirmé' WHERE id = ?");
-                $updLead->execute([$leadId]);
+                $this->syncLeadStatusFromQuoteStatus($leadId, 'accepted');
             }
             echo json_encode(["message" => "Devis accepté avec succès"]);
         } else {
@@ -717,6 +1189,8 @@ class CompanyController {
             echo json_encode(['error' => 'Forbidden']);
             return;
         }
+        $this->backfillClientLeadOwnershipByEmail($auth['id']);
+        $this->backfillOrphanQuotesForClient($auth['id']);
 
         // Similar verification as acceptQuote
         $this->quote->id = $id;
@@ -736,13 +1210,125 @@ class CompanyController {
             return;
         }
 
-        $query = "UPDATE quotes SET status = 'refuse' WHERE id = ?";
+        $query = "UPDATE quotes SET status = 'rejected' WHERE id = ?";
         $stmt = $this->db->prepare($query);
         if ($stmt->execute([$id])) {
+            $quoteData = $this->db->prepare("SELECT lead_id FROM quotes WHERE id = ?");
+            $quoteData->execute([$id]);
+            $leadId = $quoteData->fetchColumn();
+            if ($leadId) {
+                $this->syncLeadStatusFromQuoteStatus($leadId, 'rejected');
+            }
             echo json_encode(["message" => "Devis refusé"]);
         } else {
             http_response_code(500);
             echo json_encode(["error" => "Erreur lors du refus"]);
+        }
+    }
+
+    private function backfillClientLeadOwnershipByEmail(string $clientId): void {
+        try {
+            $profileStmt = $this->db->prepare("SELECT email FROM user_profiles WHERE id = ? AND role = 'client' LIMIT 1");
+            $profileStmt->execute([$clientId]);
+            $email = trim((string)$profileStmt->fetchColumn());
+            if ($email === '') {
+                return;
+            }
+
+            $upd = $this->db->prepare("
+                UPDATE leads
+                SET user_id = ?
+                WHERE user_id IS NULL
+                  AND email IS NOT NULL
+                  AND LOWER(TRIM(email)) = LOWER(TRIM(?))
+            ");
+            $upd->execute([$clientId, $email]);
+        } catch (Throwable $e) {
+            error_log('backfillClientLeadOwnershipByEmail error: ' . $e->getMessage());
+        }
+    }
+
+    private function syncLeadStatusFromQuoteStatus(string $leadId, string $quoteStatus): void {
+        $status = strtolower(trim($quoteStatus));
+        $leadStatus = null;
+
+        if (in_array($status, ['attente_client', 'sent', 'draft'], true)) {
+            $leadStatus = 'quote_sent';
+        } elseif (in_array($status, ['accepted', 'signe'], true)) {
+            $leadStatus = 'confirmed';
+        } elseif (in_array($status, ['completed', 'realise', 'réalisé'], true)) {
+            $leadStatus = 'completed';
+        } elseif (in_array($status, ['rejected', 'refuse'], true)) {
+            $leadStatus = 'processed';
+        }
+
+        if ($leadStatus === null) {
+            return;
+        }
+
+        $updLead = $this->db->prepare("UPDATE leads SET status = ? WHERE id = ?");
+        $updLead->execute([$leadStatus, $leadId]);
+    }
+
+    private function normalizeQuoteStatus(string $status): string {
+        $s = strtolower(trim($status));
+        return match ($s) {
+            'signe' => 'accepted',
+            'refuse' => 'rejected',
+            'realise', 'réalisé' => 'completed',
+            default => $s !== '' ? $s : 'attente_client',
+        };
+    }
+
+    private function backfillOrphanQuotesForClient(string $clientId): void {
+        try {
+            $clientLeadsStmt = $this->db->prepare("
+                SELECT l.id, l.created_at, la.provider_id
+                FROM leads l
+                JOIN lead_assignments la ON la.lead_id = l.id
+                LEFT JOIN quotes q ON q.lead_id = l.id
+                WHERE l.user_id = ?
+                  AND q.id IS NULL
+            ");
+            $clientLeadsStmt->execute([$clientId]);
+            $clientLeads = $clientLeadsStmt->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($clientLeads)) {
+                return;
+            }
+
+            $findOrphanQuote = $this->db->prepare("
+                SELECT q.id, q.client_name
+                FROM quotes q
+                LEFT JOIN leads lq ON lq.id = q.lead_id
+                LEFT JOIN user_profiles uq ON uq.id = lq.user_id
+                WHERE q.provider_id = ?
+                  AND (
+                        q.lead_id IS NULL
+                        OR uq.role IS NULL
+                        OR uq.role <> 'client'
+                  )
+                  AND q.created_at BETWEEN DATE_SUB(?, INTERVAL 3 DAY) AND ?
+                ORDER BY ABS(TIMESTAMPDIFF(MINUTE, q.created_at, ?)) ASC
+                LIMIT 1
+            ");
+
+            $attachQuote = $this->db->prepare("UPDATE quotes SET lead_id = ? WHERE id = ?");
+
+            foreach ($clientLeads as $lead) {
+                $findOrphanQuote->execute([
+                    $lead['provider_id'],
+                    $lead['created_at'],
+                    $lead['created_at'],
+                    $lead['created_at'],
+                ]);
+                $quote = $findOrphanQuote->fetch(PDO::FETCH_ASSOC);
+                if (!$quote || empty($quote['id'])) {
+                    continue;
+                }
+                $attachQuote->execute([$lead['id'], $quote['id']]);
+            }
+        } catch (Throwable $e) {
+            error_log('backfillOrphanQuotesForClient error: ' . $e->getMessage());
         }
     }
 
@@ -948,7 +1534,7 @@ class CompanyController {
 
         $demandStmt = $this->db->prepare("SELECT COALESCE(NULLIF(TRIM(sector), ''), 'Non renseigne') AS sector, 
                                                  COUNT(*) AS demand,
-                                                 SUM(CASE WHEN status IN ('processed', 'confirmé', 'closed') THEN 1 ELSE 0 END) as processed
+                                                 SUM(CASE WHEN status IN ('processed', 'confirmed', 'confirmé', 'closed') THEN 1 ELSE 0 END) as processed
                                           FROM leads
                                           GROUP BY COALESCE(NULLIF(TRIM(sector), ''), 'Non renseigne')
                                           ORDER BY demand DESC");
@@ -1522,7 +2108,9 @@ class CompanyController {
                   ORDER BY q.created_at DESC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+        $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->attachDocumentsToQuotes($quotes);
+        echo json_encode($quotes);
     }
 
     public function createAdminQuote() {
@@ -1779,6 +2367,311 @@ class CompanyController {
             mt_rand(0, 0x3fff) | 0x8000,
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
+    }
+
+    private function parseRequestPayload(): array {
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+        if (stripos($contentType, 'multipart/form-data') !== false) {
+            return is_array($_POST ?? null) ? $_POST : [];
+        }
+
+        $raw = file_get_contents("php://input");
+        $data = json_decode($raw, true);
+        return is_array($data) ? $data : [];
+    }
+
+    private function ensureQuoteDocColumn(): void {
+        if (self::$quoteDocColumnChecked) {
+            return;
+        }
+        self::$quoteDocColumnChecked = true;
+
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM quotes LIKE 'doc_path'");
+            if (!$stmt || $stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE quotes ADD COLUMN doc_path VARCHAR(500) NULL AFTER status");
+            }
+        } catch (Throwable $e) {
+            error_log("Unable to ensure quotes.doc_path column: " . $e->getMessage());
+        }
+    }
+
+    private function ensureQuoteDocumentsTable(): void {
+        if (self::$quoteDocsTableChecked) {
+            return;
+        }
+        self::$quoteDocsTableChecked = true;
+
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS quote_documents (
+                    id CHAR(36) PRIMARY KEY,
+                    quote_id CHAR(36) NOT NULL,
+                    doc_path VARCHAR(500) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_quote_documents_quote_id (quote_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (Throwable $e) {
+            error_log("Unable to ensure quote_documents table: " . $e->getMessage());
+        }
+    }
+
+    private function ensureClientPartnerNotesTable(): void {
+        if (self::$clientPartnerNotesTableChecked) {
+            return;
+        }
+        self::$clientPartnerNotesTableChecked = true;
+
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS client_partner_notes (
+                    id CHAR(36) PRIMARY KEY,
+                    lead_id CHAR(36) NOT NULL,
+                    client_id CHAR(36) NOT NULL,
+                    provider_id CHAR(36) NOT NULL,
+                    rating TINYINT NULL,
+                    comment TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_cpn_provider (provider_id),
+                    INDEX idx_cpn_client (client_id),
+                    INDEX idx_cpn_lead (lead_id),
+                    INDEX idx_cpn_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (Throwable $e) {
+            error_log("Unable to ensure client_partner_notes table: " . $e->getMessage());
+        }
+    }
+
+    private function handleQuoteDocUploads(string $providerId): array {
+        if (empty($_FILES['doc']) || !is_array($_FILES['doc'])) {
+            return [];
+        }
+
+        $input = $_FILES['doc'];
+        $names = $input['name'] ?? [];
+        $tmpNames = $input['tmp_name'] ?? [];
+        $errors = $input['error'] ?? [];
+        $sizes = $input['size'] ?? [];
+
+        if (!is_array($names)) {
+            $names = [$names];
+            $tmpNames = [$tmpNames];
+            $errors = [$errors];
+            $sizes = [$sizes];
+        }
+
+        $maxSize = 10 * 1024 * 1024;
+        $maxFiles = 10;
+        $allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'];
+        $baseDir = dirname(__DIR__, 1) . '/../public/uploads/quotes/' . $providerId;
+        if (!is_dir($baseDir) && !mkdir($baseDir, 0755, true) && !is_dir($baseDir)) {
+            throw new RuntimeException("Impossible de créer le répertoire d'upload.");
+        }
+
+        $paths = [];
+        $count = count($names);
+        for ($i = 0; $i < $count; $i++) {
+            $error = (int)($errors[$i] ?? UPLOAD_ERR_NO_FILE);
+            if ($error === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if ($error !== UPLOAD_ERR_OK) {
+                throw new RuntimeException("Erreur lors de l'upload d'un document.");
+            }
+            if (count($paths) >= $maxFiles) {
+                throw new RuntimeException("Maximum $maxFiles documents par envoi.");
+            }
+
+            $size = (int)($sizes[$i] ?? 0);
+            if ($size <= 0 || $size > $maxSize) {
+                throw new RuntimeException("Un document dépasse la taille autorisée (10MB).");
+            }
+
+            $originalName = (string)($names[$i] ?? '');
+            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowedExt, true)) {
+                throw new RuntimeException("Format de document non autorisé.");
+            }
+
+            $tmpName = (string)($tmpNames[$i] ?? '');
+            if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+                throw new RuntimeException("Fichier uploadé invalide.");
+            }
+
+            $safeName = date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+            $targetPath = $baseDir . '/' . $safeName;
+            if (!move_uploaded_file($tmpName, $targetPath)) {
+                throw new RuntimeException("Impossible d'enregistrer le document.");
+            }
+            $paths[] = '/rappel/public/uploads/quotes/' . $providerId . '/' . $safeName;
+        }
+
+        return $paths;
+    }
+
+    private function saveQuoteDocuments(string $quoteId, array $docPaths): void {
+        if (empty($docPaths)) {
+            return;
+        }
+
+        $stmt = $this->db->prepare("INSERT INTO quote_documents (id, quote_id, doc_path) VALUES (?, ?, ?)");
+        foreach ($docPaths as $path) {
+            $cleanPath = trim((string)$path);
+            if ($cleanPath === '') {
+                continue;
+            }
+            $stmt->execute([$this->generateUuid(), $quoteId, $cleanPath]);
+        }
+    }
+
+    private function parseRemoveDocPaths(array $data): array {
+        $value = $data['remove_docs'] ?? [];
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [$value];
+        }
+        if (!is_array($value)) {
+            return [];
+        }
+        $paths = [];
+        foreach ($value as $item) {
+            $path = trim((string)$item);
+            if ($path !== '') {
+                $paths[] = $path;
+            }
+        }
+        return array_values(array_unique($paths));
+    }
+
+    private function removeQuoteDocuments(string $quoteId, array $docPaths): void {
+        if (empty($docPaths)) {
+            return;
+        }
+
+        $owned = $this->getQuoteDocumentPaths($quoteId);
+        $ownedSet = [];
+        foreach ($owned as $path) {
+            $ownedSet[$path] = true;
+        }
+
+        $toDeleteRows = [];
+        foreach ($docPaths as $path) {
+            if (isset($ownedSet[$path])) {
+                $toDeleteRows[] = $path;
+            }
+        }
+
+        $legacyDocPath = null;
+        $legacyStmt = $this->db->prepare("SELECT doc_path FROM quotes WHERE id = ? LIMIT 1");
+        if ($legacyStmt->execute([$quoteId])) {
+            $legacyDocPath = trim((string)($legacyStmt->fetchColumn() ?: ''));
+        }
+        $allowedDeletePaths = $toDeleteRows;
+        if ($legacyDocPath !== '' && in_array($legacyDocPath, $docPaths, true)) {
+            $allowedDeletePaths[] = $legacyDocPath;
+        }
+
+        if (!empty($toDeleteRows)) {
+            $placeholders = implode(',', array_fill(0, count($toDeleteRows), '?'));
+            $params = array_merge([$quoteId], $toDeleteRows);
+            $stmt = $this->db->prepare("DELETE FROM quote_documents WHERE quote_id = ? AND doc_path IN ($placeholders)");
+            $stmt->execute($params);
+        }
+
+        foreach (array_values(array_unique($allowedDeletePaths)) as $path) {
+            $this->deleteQuoteDocByPublicPath($path);
+        }
+    }
+
+    private function getQuoteDocumentsMap(array $quoteIds): array {
+        $quoteIds = array_values(array_unique(array_filter(array_map('strval', $quoteIds))));
+        if (empty($quoteIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($quoteIds), '?'));
+        $stmt = $this->db->prepare("SELECT quote_id, doc_path, created_at FROM quote_documents WHERE quote_id IN ($placeholders) ORDER BY created_at ASC");
+        $stmt->execute($quoteIds);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $qid = (string)($row['quote_id'] ?? '');
+            $path = trim((string)($row['doc_path'] ?? ''));
+            if ($qid === '' || $path === '') {
+                continue;
+            }
+            if (!isset($map[$qid])) {
+                $map[$qid] = [];
+            }
+            $map[$qid][] = $path;
+        }
+
+        return $map;
+    }
+
+    private function attachDocumentsToQuotes(array &$quotes): void {
+        if (empty($quotes)) {
+            return;
+        }
+
+        $quoteIds = [];
+        foreach ($quotes as $quote) {
+            $quoteIds[] = (string)($quote['id'] ?? '');
+        }
+        $docsMap = $this->getQuoteDocumentsMap($quoteIds);
+
+        foreach ($quotes as &$quote) {
+            $qid = (string)($quote['id'] ?? '');
+            $docs = $docsMap[$qid] ?? [];
+            if (empty($docs) && !empty($quote['doc_path'])) {
+                $docs[] = (string)$quote['doc_path'];
+            }
+            $quote['docs'] = array_values(array_unique(array_filter($docs)));
+            if (empty($quote['doc_path']) && !empty($quote['docs'])) {
+                $quote['doc_path'] = $quote['docs'][0];
+            }
+        }
+        unset($quote);
+    }
+
+    private function attachDocumentsToQuote(array &$quote): void {
+        $quotes = [$quote];
+        $this->attachDocumentsToQuotes($quotes);
+        $quote = $quotes[0];
+    }
+
+    private function getQuoteDocumentPaths(string $quoteId): array {
+        $stmt = $this->db->prepare("SELECT doc_path FROM quote_documents WHERE quote_id = ?");
+        $stmt->execute([$quoteId]);
+        $paths = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $result = [];
+        foreach ($paths as $path) {
+            $clean = trim((string)$path);
+            if ($clean !== '') {
+                $result[] = $clean;
+            }
+        }
+        return array_values(array_unique($result));
+    }
+
+    private function deleteQuoteDocumentsByQuoteId(string $quoteId): void {
+        $stmt = $this->db->prepare("DELETE FROM quote_documents WHERE quote_id = ?");
+        $stmt->execute([$quoteId]);
+    }
+
+    private function deleteQuoteDocByPublicPath(string $publicPath): void {
+        $prefix = '/rappel/public/uploads/quotes/';
+        if (strpos($publicPath, $prefix) !== 0) {
+            return;
+        }
+        $relative = substr($publicPath, strlen('/rappel/public/'));
+        $fullPath = dirname(__DIR__, 1) . '/../public/' . str_replace(['\\', '..'], ['/', ''], $relative);
+        if (is_file($fullPath)) {
+            @unlink($fullPath);
+        }
     }
 
     private function decodeSectors($sectors): array {
@@ -2125,3 +3018,7 @@ class CompanyController {
     }
 }
 ?>
+
+
+
+

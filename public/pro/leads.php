@@ -32,7 +32,6 @@ $token = getToken();
                oninput="filterLeads()">
     </div>
     <div class="flex p-1.5 bg-navy-50/50 rounded-2xl w-full lg:w-auto overflow-x-auto shadow-inner">
-        <button onclick="setFilter('recommended')" id="filter-recommended" class="flex-1 lg:flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-navy-400 hover:text-navy-600">Recommandés</button>
         <button onclick="setFilter('all')" id="filter-all" class="flex-1 lg:flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-white shadow-sm text-navy-950">Tous</button>
         <button onclick="setFilter('pending')" id="filter-pending" class="flex-1 lg:flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-navy-400 hover:text-navy-600">En attente</button>
         <button onclick="setFilter('processed')" id="filter-processed" class="flex-1 lg:flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-navy-400 hover:text-navy-600">Traités</button>
@@ -102,15 +101,16 @@ $token = getToken();
                     <input type="text" id="new-budget" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all" placeholder="1500€">
                 </div>
             </div>
-            <div class="space-y-1.5">
-                <label class="text-xs font-black text-navy-950 uppercase tracking-widest ml-1">Créneau souhaité</label>
-                <select id="new-time-slot" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all cursor-pointer">
-                    <option value="Matin (09h – 12h)">Matin (09h – 12h)</option>
-                    <option value="Midi (12h – 14h)">Midi (12h – 14h)</option>
-                    <option value="Après-midi (14h – 18h)">Après-midi (14h – 18h)</option>
-                    <option value="Soirée (18h – 20h)">Soirée (18h – 20h)</option>
-                    <option value="Week-end (Samedi & Dimanche)">Week-end (Samedi & Dimanche)</option>
-                </select>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-black text-navy-950 uppercase tracking-widest ml-1">Date souhaitee</label>
+                    <input type="date" id="new-preferred-date" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-black text-navy-950 uppercase tracking-widest ml-1">Heure souhaitee</label>
+                    <input type="time" id="new-preferred-time" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all">
+                </div>
             </div>
             <div class="flex gap-4 pt-4">
                 <button type="button" onclick="closeAddModal()" class="flex-1 py-4 px-6 border border-navy-100 text-navy-600 font-bold rounded-2xl hover:bg-navy-50 transition-all active:scale-95">Annuler</button>
@@ -256,15 +256,15 @@ $token = getToken();
                     <input type="text" id="edit-budget" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all">
                 </div>
             </div>
-            <div class="space-y-1.5">
-                <label class="text-xs font-black text-navy-950 uppercase tracking-widest ml-1">Créneau souhaité</label>
-                <select id="edit-time-slot" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all cursor-pointer">
-                    <option value="Matin (09h – 12h)">Matin (09h – 12h)</option>
-                    <option value="Midi (12h – 14h)">Midi (12h – 14h)</option>
-                    <option value="Après-midi (14h – 18h)">Après-midi (14h – 18h)</option>
-                    <option value="Soirée (18h – 20h)">Soirée (18h – 20h)</option>
-                    <option value="Week-end (Samedi & Dimanche)">Week-end (Samedi & Dimanche)</option>
-                </select>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-black text-navy-950 uppercase tracking-widest ml-1">Date souhaitee</label>
+                    <input type="date" id="edit-preferred-date" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-black text-navy-950 uppercase tracking-widest ml-1">Heure souhaitee</label>
+                    <input type="time" id="edit-preferred-time" class="w-full h-12 px-4 rounded-xl bg-navy-50/50 border border-navy-100 focus:outline-none focus:ring-4 focus:ring-accent-500/10 focus:border-accent-500/50 font-bold text-sm transition-all">
+                </div>
             </div>
             <div class="flex gap-4 pt-4">
                 <button type="button" onclick="closeEditModal()" class="flex-1 py-4 px-6 border border-navy-100 text-navy-600 font-bold rounded-2xl hover:bg-navy-50 transition-all">Annuler</button>
@@ -287,6 +287,22 @@ window.PHP_TOKEN = '__PHP_TOKEN__';
 let allLeads = [];
 let currentFilter = 'all';
 let currentUser = null;
+
+function getUserSectors() {
+    const sectorsRaw = currentUser?.sectors ?? [];
+    let sectors = [];
+    try {
+        if (Array.isArray(sectorsRaw)) {
+            sectors = sectorsRaw;
+        } else if (typeof sectorsRaw === 'string' && sectorsRaw.trim() !== '') {
+            const parsed = JSON.parse(sectorsRaw);
+            sectors = Array.isArray(parsed) ? parsed : sectorsRaw.split(',');
+        }
+    } catch (e) {
+        sectors = String(sectorsRaw).split(',');
+    }
+    return sectors.map(s => String(s).trim()).filter(Boolean);
+}
 
 console.log('[DEBUG] Leads script initialized. window.PHP_TOKEN exists:', !!window.PHP_TOKEN);
 
@@ -365,6 +381,23 @@ function renderLeads() {
 
     const el = document.getElementById('leads-container');
     if (!filtered.length) {
+        const noSectorConfigured = getUserSectors().length === 0;
+        if (noSectorConfigured && allLeads.length === 0 && (currentFilter === 'all' || currentFilter === 'recommended')) {
+            el.innerHTML = `<div class="flex flex-col items-center justify-center py-24 opacity-90 max-w-2xl mx-auto text-center">
+                <div class="w-24 h-24 bg-indigo-50 rounded-[2.5rem] flex items-center justify-center mb-8 border border-indigo-100 shadow-inner">
+                    <i data-lucide="shield-alert" class="text-indigo-400" style="width:40px;height:40px;"></i>
+                </div>
+                <p class="text-2xl font-display font-extrabold text-navy-950 tracking-tight">Aucun secteur configuré sur votre compte</p>
+                <p class="text-navy-500 font-bold text-sm mt-2">Ajoutez au moins un secteur d'activité pour recevoir des leads pertinents.</p>
+                <a href="/rappel/public/pro/settings.php" class="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-navy-950 text-white text-xs font-black uppercase tracking-widest hover:bg-navy-900 transition-all">
+                    <i data-lucide="settings" style="width:14px;height:14px;"></i>
+                    Configurer mes secteurs
+                </a>
+            </div>`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            return;
+        }
+
         el.innerHTML = `<div class="flex flex-col items-center justify-center py-32 opacity-60">
             <div class="w-24 h-24 bg-white/50 rounded-[2.5rem] flex items-center justify-center mb-8 border border-white shadow-inner">
                 <i data-lucide="inbox" class="text-navy-200" style="width:40px;height:40px;"></i>
@@ -619,7 +652,9 @@ function openEditModal(id) {
     document.getElementById('edit-need').value = lead.need || '';
     document.getElementById('edit-budget').value = lead.budget || '';
     const ts = lead.time_slot || '';
-    document.getElementById('edit-time-slot').value = (ts === 'Non spécifié') ? '' : ts;
+    const extractedTime = String(ts).match(/(\\d{2}:\\d{2})/);
+    document.getElementById('edit-preferred-time').value = extractedTime ? extractedTime[1] : '';
+    document.getElementById('edit-preferred-date').value = lead.preferred_date || '';
 
     const modal = document.getElementById('edit-lead-modal');
     modal.classList.remove('hidden');
@@ -643,7 +678,8 @@ async function handleAddLead(e) {
             address: document.getElementById('new-address').value,
             need: document.getElementById('new-need').value,
             budget: document.getElementById('new-budget').value,
-            time_slot: document.getElementById('new-time-slot').value,
+            time_slot: document.getElementById('new-preferred-time').value ? ('Heure precise (' + document.getElementById('new-preferred-time').value + ')') : '',
+            preferred_date: document.getElementById('new-preferred-date').value,
         })});
         closeAddModal();
         loadLeads();
@@ -669,7 +705,8 @@ async function handleEditLead(e) {
             status: document.getElementById('edit-status').value,
             need: document.getElementById('edit-need').value,
             budget: document.getElementById('edit-budget').value,
-            time_slot: document.getElementById('edit-time-slot').value,
+            time_slot: document.getElementById('edit-preferred-time').value ? ('Heure precise (' + document.getElementById('edit-preferred-time').value + ')') : '',
+            preferred_date: document.getElementById('edit-preferred-date').value,
         })});
         closeEditModal();
         await loadLeads();
@@ -788,6 +825,19 @@ async function openDetails(id) {
                 <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
                     <span class="text-[8px] font-black text-navy-400 uppercase tracking-widest">Disponibilité</span>
                     <span class="px-2 py-0.5 bg-white/10 rounded text-[10px] font-bold">${escapeHtml(l.time_slot)}</span>
+                </div>` : ''}
+                ${l.preferred_date ? `
+                <div class="mt-3 flex items-center justify-between">
+                    <span class="text-[8px] font-black text-navy-400 uppercase tracking-widest">Date souhaitée</span>
+                    <span class="px-2 py-0.5 bg-white/10 rounded text-[10px] font-bold">${escapeHtml(l.preferred_date)}</span>
+                </div>` : ''}
+                ${l.doc_path ? `
+                <div class="mt-3 pt-3 border-t border-white/5">
+                    <a href="${encodeURI(String(l.doc_path))}" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-black uppercase tracking-widest text-white transition-all">
+                        <i data-lucide="paperclip" style="width:13px;height:13px;"></i>
+                        Voir le document client
+                    </a>
                 </div>` : ''}
             </div>
         </div>
@@ -921,3 +971,4 @@ $extraScript = str_replace('__PHP_TOKEN__', $safeToken, $extraScript);
 ?>
 
 <?php include __DIR__ . '/../includes/dashboard_layout_bottom.php'; ?>
+

@@ -24,7 +24,8 @@ if ($isAdminUser) {
     $menuItems[] = ['icon' => 'shield', 'label' => 'Vue globale', 'path' => '/rappel/public/admin/dashboard.php?view=overview', 'admin_view' => 'overview', 'is_admin' => true];
 } elseif ($userRole === 'client') {
     $menuItems[] = ['icon' => 'layout-dashboard', 'label' => 'Mon Espace', 'path' => '/rappel/public/client/dashboard.php'];
-    $menuItems[] = ['icon' => 'clock', 'label' => 'Mes Demandes', 'path' => '/rappel/public/client/dashboard.php#requests'];
+    $menuItems[] = ['icon' => 'clock', 'label' => 'Mes Demandes', 'path' => '/rappel/public/client/mes-demandes.php'];
+    $menuItems[] = ['icon' => 'file-text', 'label' => 'Voir mes devis', 'path' => '/rappel/public/client/quotes.php'];
     $menuItems[] = ['icon' => 'settings', 'label' => 'Paramètres', 'path' => '/rappel/public/client/settings.php'];
 } else {
     $menuItems[] = ['icon' => 'layout-dashboard', 'label' => 'Tableau de bord', 'path' => '/rappel/public/pro/dashboard.php'];

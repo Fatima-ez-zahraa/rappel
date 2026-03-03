@@ -1,6 +1,10 @@
 -- Database Schema (MariaDB Version)
-CREATE DATABASE IF NOT EXISTS rappel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE rappel;
+CREATE DATABASE IF NOT EXISTS `beta-db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `beta-db`;
+
+CREATE USER IF NOT EXISTS 'beta-user'@'localhost' IDENTIFIED BY 'Fatima2026++';
+GRANT ALL PRIVILEGES ON `beta-db`.* TO 'beta-user'@'localhost';
+FLUSH PRIVILEGES;
 
 -- 1. Table: user_profiles
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -45,6 +49,9 @@ CREATE TABLE IF NOT EXISTS leads (
     sector VARCHAR(100),
     need TEXT,
     budget DECIMAL(12, 2) DEFAULT 0,
+    time_slot VARCHAR(100) NULL,
+    preferred_date DATE NULL,
+    doc_path VARCHAR(500) NULL,
     status VARCHAR(20) DEFAULT 'pending', -- 'pending' | 'assigned' | 'completed'
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -69,6 +76,7 @@ CREATE TABLE IF NOT EXISTS quotes (
     amount DECIMAL(12, 2),
     items_count INT DEFAULT 1,
     status VARCHAR(20) DEFAULT 'attente_client', -- 'attente_client' | 'signe' | 'refuse'
+    doc_path VARCHAR(500) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (provider_id) REFERENCES user_profiles(id) ON DELETE CASCADE
@@ -84,6 +92,17 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     features JSON,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
+-- 5b. Table: quote_documents
+CREATE TABLE IF NOT EXISTS quote_documents (
+    id CHAR(36) PRIMARY KEY,
+    quote_id CHAR(36) NOT NULL,
+    doc_path VARCHAR(500) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_quote_documents_quote_id ON quote_documents(quote_id);
 
 -- 6. Table: invoices
 CREATE TABLE IF NOT EXISTS invoices (

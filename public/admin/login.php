@@ -299,6 +299,7 @@ async function handleAdminLogin(e) {
             body: JSON.stringify({
                 email: document.getElementById('admin-email').value,
                 password: document.getElementById('admin-password').value,
+                expected_role: 'admin'
             })
         });
 
@@ -359,4 +360,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-

@@ -56,11 +56,14 @@ window.formatRelativeTime = function (dateString) {
 // API fetch helper 
 window.apiFetch = async function (endpoint, options = {}) {
     const token = Auth.getToken() || (window.PHP_TOKEN || '');
+    const isFormData = (typeof FormData !== 'undefined') && (options.body instanceof FormData);
     const headers = {
-        'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...(options.headers || {}),
     };
+    if (!isFormData && !Object.keys(headers).some(h => h.toLowerCase() === 'content-type')) {
+        headers['Content-Type'] = 'application/json';
+    }
     const res = await fetch(`${ACTUAL_API_URL}${endpoint}`, { ...options, headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.message || 'Erreur API');

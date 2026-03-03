@@ -159,6 +159,13 @@ class AuthController
     public function login()
     {
         $data = json_decode(file_get_contents("php://input"));
+        $expectedRole = isset($data->expected_role) ? trim((string)$data->expected_role) : '';
+        $allowedRoles = ['admin', 'provider', 'client'];
+        if ($expectedRole !== '' && !in_array($expectedRole, $allowedRoles, true)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Rôle de connexion invalide."]);
+            return;
+        }
 
         $this->user->email = $data->email ?? '';
 
@@ -174,6 +181,12 @@ class AuthController
             }
 
             if (password_verify($data->password, $this->user->password)) {
+                if ($expectedRole !== '' && $this->user->role !== $expectedRole) {
+                    http_response_code(403);
+                    echo json_encode(["error" => "Ce compte n'est pas autorisé pour cet espace."]);
+                    return;
+                }
+
                 $token_payload = [
                     "id" => $this->user->id,
                     "email" => $this->user->email,

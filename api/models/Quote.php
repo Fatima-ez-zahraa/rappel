@@ -14,6 +14,7 @@ class Quote
     public $items_count;
     public $lead_id;
     public $status;
+    public $doc_path;
     public $created_at;
     public $updated_at;
 
@@ -75,12 +76,34 @@ class Quote
     {
         $query = "SELECT q.*, l.need, up.company_name as provider_company
                   FROM " . $this->table_name . " q
-                  INNER JOIN leads l ON q.lead_id = l.id
+                  LEFT JOIN leads l ON q.lead_id = l.id
                   LEFT JOIN user_profiles up ON q.provider_id = up.id
-                  WHERE l.user_id = ?
+                  LEFT JOIN user_profiles cu ON cu.id = :uid_profile
+                  WHERE l.user_id = :uid_direct
+                     OR (
+                        l.user_id IS NULL
+                        AND l.email IS NOT NULL
+                        AND cu.email IS NOT NULL
+                        AND LOWER(TRIM(l.email)) = LOWER(TRIM(cu.email))
+                     )
+                     OR (
+                        l.user_id IS NULL
+                        AND l.name IS NOT NULL
+                        AND (
+                            (cu.company_name IS NOT NULL AND LOWER(TRIM(l.name)) = LOWER(TRIM(cu.company_name)))
+                            OR LOWER(TRIM(l.name)) = LOWER(TRIM(CONCAT(COALESCE(cu.first_name, ''), ' ', COALESCE(cu.last_name, ''))))
+                            OR (cu.email IS NOT NULL AND LOWER(TRIM(l.name)) = LOWER(TRIM(cu.email)))
+                        )
+                     )
+                     OR (
+                        (cu.company_name IS NOT NULL AND LOWER(TRIM(q.client_name)) = LOWER(TRIM(cu.company_name)))
+                        OR LOWER(TRIM(q.client_name)) = LOWER(TRIM(CONCAT(COALESCE(cu.first_name, ''), ' ', COALESCE(cu.last_name, ''))))
+                        OR (cu.email IS NOT NULL AND LOWER(TRIM(q.client_name)) = LOWER(TRIM(cu.email)))
+                     )
                   ORDER BY q.created_at DESC";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(1, $user_id);
+        $stmt->bindParam(':uid_profile', $user_id);
+        $stmt->bindParam(':uid_direct', $user_id);
         $stmt->execute();
         return $stmt;
     }
@@ -96,7 +119,8 @@ class Quote
                     project_name = :project_name,
                     amount = :amount,
                     items_count = :items_count,
-                    status = :status";
+                    status = :status,
+                    doc_path = :doc_path";
 
         $stmt = $this->conn->prepare($query);
 
@@ -109,6 +133,7 @@ class Quote
         $stmt->bindParam(':amount', $this->amount);
         $stmt->bindParam(':items_count', $this->items_count);
         $stmt->bindParam(':status', $this->status);
+        $stmt->bindParam(':doc_path', $this->doc_path);
 
         if ($stmt->execute()) {
             return true;
@@ -125,7 +150,8 @@ class Quote
                     amount = :amount,
                     items_count = :items_count,
                     status = :status,
-                    lead_id = :lead_id
+                    lead_id = :lead_id,
+                    doc_path = :doc_path
                 WHERE id = :id AND provider_id = :provider_id";
 
         $stmt = $this->conn->prepare($query);
@@ -138,6 +164,7 @@ class Quote
         $stmt->bindParam(':items_count', $this->items_count);
         $stmt->bindParam(':status', $this->status);
         $stmt->bindParam(':lead_id', $this->lead_id);
+        $stmt->bindParam(':doc_path', $this->doc_path);
 
         if ($stmt->execute()) {
             return true;
@@ -174,6 +201,7 @@ class Quote
             $this->amount = $row['amount'];
             $this->items_count = $row['items_count'];
             $this->status = $row['status'];
+            $this->doc_path = $row['doc_path'] ?? null;
             $this->created_at = $row['created_at'];
             return true;
         }

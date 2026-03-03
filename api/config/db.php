@@ -3,10 +3,10 @@
 
 class Database
 {
-    private $host = "127.0.0.1";
-    private $username = "root";
-    private $password = "";
-    private $port = "3308"; 
+    private $host = "localhost";
+    private $username = "beta-user";
+    private $password = "Fatima2026++";
+    private $port = "3306"; 
     public $conn;
 
     public function getConnection()

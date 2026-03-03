@@ -5,11 +5,18 @@ if (isLoggedIn() && isVerified()) {
         header('Location: /rappel/public/admin/dashboard.php');
         exit;
     }
-    header('Location: /rappel/public/pro/dashboard.php');
-    exit;
+    if (isProvider()) {
+        header('Location: /rappel/public/pro/dashboard.php');
+        exit;
+    }
+    clearSession();
+}
+$loginError = $_GET['error'] ?? '';
+$redirect = $_GET['redirect'] ?? '/rappel/public/pro/dashboard.php';
+if (strpos($redirect, '/rappel/public/pro/') !== 0) {
+    $redirect = '/rappel/public/pro/dashboard.php';
 }
 $pageTitle = 'Connexion Expert';
-$redirect = $_GET['redirect'] ?? '/rappel/public/pro/dashboard.php';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -72,9 +79,9 @@ $redirect = $_GET['redirect'] ?? '/rappel/public/pro/dashboard.php';
                     </div>
                 </div>
 
-                <div id="login-error" class="form-error hidden">
+                <div id="login-error" class="form-error <?= $loginError ? '' : 'hidden' ?>">
                     <span class="w-1.5 h-1.5 rounded-full bg-red-600 flex-shrink-0"></span>
-                    <span id="login-error-text"></span>
+                    <span id="login-error-text"><?= htmlspecialchars($loginError ?: '') ?></span>
                 </div>
 
                 <button type="submit" id="login-btn"
@@ -113,11 +120,15 @@ async function handleLogin(e) {
             body: JSON.stringify({
                 email: document.getElementById('login-email').value,
                 password: document.getElementById('login-password').value,
+                expected_role: 'provider'
             })
         });
 
         const token = data.session?.access_token || data.token || '';
         const user = data.user || {};
+        if (user.role !== 'provider') {
+            throw new Error('Ce compte n\'est pas autorisé sur l\'espace expert.');
+        }
 
         // Store in PHP session
         await fetch('/rappel/public/api-session.php', {
@@ -130,12 +141,7 @@ async function handleLogin(e) {
         Auth.setToken(token);
         Auth.setUser(user);
 
-        // Redirect based on role
-        if (user.role === 'admin') {
-            window.location.href = '/rappel/public/admin/dashboard.php';
-        } else {
-            window.location.href = REDIRECT_URL;
-        }
+        window.location.href = REDIRECT_URL;
 
     } catch (err) {
         errText.textContent = err.message || 'Identifiants invalides.';

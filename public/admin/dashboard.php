@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 requireAdmin();
 
@@ -105,8 +105,11 @@ $showSettings = $view === 'settings';
 
 <?php if ($showProviders): ?>
 <section id="admin-providers" class="card p-6 mb-8">
-    <div class="flex items-center justify-between mb-5">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-5">
         <h2 class="text-lg font-display font-bold text-navy-950">Prestataires - Infos complètes</h2>
+        <div class="w-full lg:w-[380px]">
+            <input id="providers-search" class="form-input rounded-xl h-11" placeholder="Rechercher: nom, prenom, email, secteur...">
+        </div>
     </div>
     <div class="overflow-auto">
         <table class="w-full text-sm">
@@ -128,12 +131,38 @@ $showSettings = $view === 'settings';
         </table>
     </div>
 </section>
+
+<section id="admin-provider-plans" class="card p-6 mb-8">
+    <div class="flex items-center justify-between mb-5">
+        <h2 class="text-lg font-display font-bold text-navy-950">Forfaits des prestataires</h2>
+        <p class="text-xs text-navy-500 font-bold uppercase tracking-widest">Vue synthese</p>
+    </div>
+    <div class="overflow-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-navy-500 border-b border-navy-100">
+                    <th class="py-2 pr-3">Prestataire</th>
+                    <th class="py-2 pr-3">Email</th>
+                    <th class="py-2 pr-3">Secteurs</th>
+                    <th class="py-2 pr-3">Forfait</th>
+                    <th class="py-2 pr-3">Abonnement</th>
+                </tr>
+            </thead>
+            <tbody id="provider-plans-body">
+                <tr><td colspan="5" class="py-8 text-center text-navy-400">Chargement...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
 <?php endif; ?>
 
 <?php if ($showLeads): ?>
 <section id="admin-leads" class="card p-6 mb-8">
-    <div class="flex items-center justify-between mb-5">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-5">
         <h2 class="text-lg font-display font-bold text-navy-950">Leads - Toutes les informations</h2>
+        <div class="w-full lg:w-[380px]">
+            <input id="leads-search" class="form-input rounded-xl h-11" placeholder="Rechercher: nom, prenom, email, secteur...">
+        </div>
     </div>
     <div class="overflow-auto">
         <table class="w-full text-sm">
@@ -242,6 +271,18 @@ $showSettings = $view === 'settings';
         </div>
     </div>
 
+    <div class="card p-6 bg-white/40 border-navy-100">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em] mb-1">Qualite service</p>
+                <h3 class="text-lg font-display font-black text-navy-950 tracking-tight uppercase">Avis clients sur partenaires</h3>
+            </div>
+        </div>
+        <div id="admin-client-feedback" class="space-y-3">
+            <p class="text-sm text-navy-400">Chargement...</p>
+        </div>
+    </div>
+
     <!-- Legacy Tables (Optional but kept as technical views) -->
     <div class="grid lg:grid-cols-2 gap-5">
         <div class="rounded-xl border border-navy-100 p-4 overflow-auto bg-white/40">
@@ -346,6 +387,10 @@ $extraScript = <<<'JS'
 const PHP_TOKEN = '__PHP_TOKEN__';
 const ADMIN_VIEW = '__ADMIN_VIEW__';
 let adminPlansCache = [];
+let adminProvidersData = [];
+let adminLeadsData = [];
+let providersSearchQuery = '';
+let leadsSearchQuery = '';
 
 function escapeHtml(input) {
     return String(input ?? '')
@@ -360,21 +405,24 @@ async function loadAdminAll() {
     if (PHP_TOKEN) Auth.setToken(PHP_TOKEN);
 
     try {
-        const [stats, providers, leads, analytics, dispatch, plans] = await Promise.all([
+        const [stats, providers, leads, analytics, dispatch, plans, feedback] = await Promise.all([
             apiFetch('/admin/stats'),
             apiFetch('/admin/providers'),
             apiFetch('/admin/leads'),
             apiFetch('/admin/analytics'),
             apiFetch('/admin/dispatch'),
-            apiFetch('/admin/plans')
+            apiFetch('/admin/plans'),
+            apiFetch('/feedback/admin')
         ]);
 
         renderStats(stats || {}, analytics || {});
         renderAdminPlans(Array.isArray(plans) ? plans : []);
         renderProviders(Array.isArray(providers) ? providers : []);
+        renderProviderPlans(Array.isArray(providers) ? providers : []);
         renderLeads(Array.isArray(leads) ? leads : []);
         renderAnalytics(analytics || {});
         renderDispatchOverview(dispatch || {});
+        renderAdminClientFeedback(Array.isArray(feedback) ? feedback : []);
     } catch (err) {
         console.error('Admin load error:', err);
         if (typeof showToast === 'function') {
@@ -636,15 +684,30 @@ function renderProviders(providers) {
     const body = document.getElementById('providers-table-body');
     if (!body) return;
 
-    if (!providers.length) {
+    adminProvidersData = Array.isArray(providers) ? providers : [];
+    const query = String(providersSearchQuery || '').trim().toLowerCase();
+    const filtered = !query ? adminProvidersData : adminProvidersData.filter((p) => {
+        const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+        const sectors = Array.isArray(p.sectors_list) ? p.sectors_list.join(' ') : (p.sectors || '');
+        const haystack = [
+            p.first_name,
+            p.last_name,
+            fullName,
+            p.email,
+            sectors
+        ].map((v) => String(v || '').toLowerCase()).join(' ');
+        return haystack.includes(query);
+    });
+
+    if (!filtered.length) {
         body.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-navy-400">Aucun prestataire.</td></tr>';
         return;
     }
-    
-    // Cache providers for details view
-    window.adminProvidersData = providers;
 
-    body.innerHTML = providers.map((p) => {
+    // Cache providers for details view
+    window.adminProvidersData = adminProvidersData;
+
+    body.innerHTML = filtered.map((p) => {
         const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'N/A';
         const contact = [p.email || '', p.phone || '', p.city || ''].filter(Boolean).join(' | ');
         const niches = Array.isArray(p.sectors_list) ? p.sectors_list.join(', ') : '';
@@ -681,11 +744,27 @@ function renderLeads(leads) {
     const body = document.getElementById('leads-table-body');
     if (!body) return;
 
-    if (!leads.length) {
+    adminLeadsData = Array.isArray(leads) ? leads : [];
+    const query = String(leadsSearchQuery || '').trim().toLowerCase();
+    const filtered = !query ? adminLeadsData : adminLeadsData.filter((l) => {
+        const hasProfile = !!l.client_first_name;
+        const displayName = hasProfile ? `${l.client_first_name || ''} ${l.client_last_name || ''}`.trim() : (l.name || '');
+        const haystack = [
+            displayName,
+            l.client_first_name,
+            l.client_last_name,
+            l.name,
+            l.email,
+            l.sector
+        ].map((v) => String(v || '').toLowerCase()).join(' ');
+        return haystack.includes(query);
+    });
+
+    if (!filtered.length) {
         body.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-navy-400">Aucun lead.</td></tr>';
         return;
     }
-    body.innerHTML = leads.map((l) => {
+    body.innerHTML = filtered.map((l) => {
         const hasProfile = !!l.client_first_name;
         const displayName = hasProfile ? `${l.client_first_name} ${l.client_last_name || ''}`.trim() : (l.name || 'Inconnu');
         const displayPhone = l.client_profile_phone || l.phone || '';
@@ -815,20 +894,33 @@ function renderStatusDistribution(dist) {
 function renderMonthlyActivity(series) {
     const el = document.getElementById('monthly-activity-chart');
     if (!el) return;
-    const max = Math.max(...series.map(d => parseInt(d.leads_count)), 1);
+    const rows = Array.isArray(series) ? series.slice(-6) : [];
+    if (!rows.length) {
+        el.innerHTML = '<p class="text-sm text-navy-400 font-medium">Aucune donnée mensuelle.</p>';
+        return;
+    }
 
-    el.innerHTML = series.slice(-6).map(d => {
-        const count = parseInt(d.leads_count) || 0;
-        const h = max > 0 ? Math.round((count / max) * 100) : 0;
-        const month = new Date(d.month_label + '-01').toLocaleDateString('fr-FR', { month: 'short' });
+    const counts = rows.map((d) => parseInt(d.leads_count, 10) || 0);
+    const max = Math.max(...counts, 0);
+    const min = Math.min(...counts, max);
+    const range = max - min;
+
+    el.innerHTML = rows.map((d, idx) => {
+        const count = parseInt(d.leads_count, 10) || 0;
+        let h = 12;
+        if (range === 0) {
+            h = count > 0 ? 60 : 12;
+        } else {
+            h = 12 + Math.round(((count - min) / range) * 88);
+        }
+
+        const month = new Date(`${d.month_label}-01T00:00:00`).toLocaleDateString('fr-FR', { month: 'short' });
         return `
-            <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="relative w-full flex-1 flex flex-col justify-end min-h-[40px]">
-                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-navy-950 text-white text-[10px] font-black px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
+            <div class="flex-1 flex flex-col items-center gap-3 group h-full animate-fade-in-up" style="animation-delay:${idx * 80}ms">
+                <div class="relative w-full flex-1 min-h-[120px] rounded-xl bg-navy-100/40 border border-navy-100 overflow-hidden">
+                    <div class="absolute left-0 right-0 bottom-0 bg-gradient-to-t from-brand-700 to-brand-400 transition-all duration-700" style="height:${h}%"></div>
+                    <div class="absolute -top-2 left-1/2 -translate-x-1/2 bg-navy-950 text-white text-[10px] font-black px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 z-10">
                         ${count}
-                    </div>
-                    <div class="w-full bg-indigo-100 rounded-t-lg group-hover:bg-indigo-200 transition-all duration-500 border-x border-t border-indigo-200" style="height: ${h}%">
-                        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-brand-600 to-brand-400 rounded-t-lg opacity-80 group-hover:opacity-100 transition-all duration-700" style="height: 100%"></div>
                     </div>
                 </div>
                 <span class="text-[9px] font-black text-navy-400 uppercase tracking-widest">${month}</span>
@@ -879,6 +971,68 @@ function renderSectorImpactAdmin(data) {
         `;
     }).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderProviderPlans(providers) {
+    const body = document.getElementById('provider-plans-body');
+    if (!body) return;
+
+    const rows = Array.isArray(providers) ? providers : [];
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-navy-400">Aucun prestataire.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = rows.map((p) => {
+        const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'N/A';
+        const display = p.company_name || fullName;
+        const sectors = Array.isArray(p.sectors_list) ? p.sectors_list.join(', ') : (p.sectors || '-');
+        const plan = p.plan_name || 'Forfait inactif';
+        const status = String(p.subscription_status || '').toLowerCase() === 'active'
+            ? '<span class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">Actif</span>'
+            : '<span class="px-2 py-1 rounded-lg bg-navy-100 text-navy-600 text-[10px] font-black uppercase tracking-widest">Inactif</span>';
+
+        return `
+            <tr class="border-b border-navy-50 align-top">
+                <td class="py-3 pr-3">
+                    <p class="font-bold text-navy-900">${escapeHtml(display)}</p>
+                    <p class="text-[11px] text-navy-400">${escapeHtml(fullName)}</p>
+                </td>
+                <td class="py-3 pr-3 text-navy-700">${escapeHtml(p.email || '-')}</td>
+                <td class="py-3 pr-3 text-navy-700">${escapeHtml(sectors)}</td>
+                <td class="py-3 pr-3 text-navy-900 font-bold">${escapeHtml(plan)}</td>
+                <td class="py-3 pr-3">${status}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderAdminClientFeedback(items) {
+    const el = document.getElementById('admin-client-feedback');
+    if (!el) return;
+
+    if (!Array.isArray(items) || !items.length) {
+        el.innerHTML = '<p class="text-sm text-navy-400">Aucun avis client disponible.</p>';
+        return;
+    }
+
+    el.innerHTML = items.slice(0, 12).map((note) => {
+        const clientName = `${note.client_first_name || ''} ${note.client_last_name || ''}`.trim() || note.client_email || 'Client';
+        const providerName = (note.provider_company_name || `${note.provider_first_name || ''} ${note.provider_last_name || ''}`.trim() || 'Expert partenaire');
+        const stars = Number(note.rating || 0);
+        const starsLabel = stars > 0 ? `${Math.min(stars, 5)}/5` : 'Sans note';
+
+        return `
+            <div class="rounded-2xl border border-navy-100 bg-white/70 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <p class="text-xs font-black text-navy-950 uppercase tracking-widest">${escapeHtml(clientName)} -> ${escapeHtml(providerName)}</p>
+                    <span class="text-[11px] font-black text-amber-500">${escapeHtml(starsLabel)}</span>
+                </div>
+                <p class="text-[10px] text-navy-500 font-bold uppercase tracking-widest mb-1">${escapeHtml(note.lead_sector || 'Projet')} - ${new Date(note.created_at || Date.now()).toLocaleDateString('fr-FR')}</p>
+                <p class="text-sm text-navy-700">${escapeHtml(note.comment || '')}</p>
+            </div>
+        `;
+    }).join('');
 }
 
 async function runAutoDispatch() {
@@ -944,6 +1098,17 @@ function showProviderDetails(id) {
                 <div class="p-5 rounded-2xl bg-white border border-navy-100 shadow-sm">
                     <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">Forme Juridique</p>
                     <p class="font-bold text-navy-900">${escapeHtml(p.legal_form || 'N/A')}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-5 rounded-2xl bg-white border border-navy-100 shadow-sm">
+                    <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">Forfait</p>
+                    <p class="font-bold text-navy-900">${escapeHtml(p.plan_name || 'Forfait inactif')}</p>
+                </div>
+                <div class="p-5 rounded-2xl bg-white border border-navy-100 shadow-sm">
+                    <p class="text-[9px] font-black text-navy-400 uppercase tracking-widest mb-1">Abonnement</p>
+                    <p class="font-bold ${String(p.subscription_status || '').toLowerCase() === 'active' ? 'text-emerald-600' : 'text-navy-500'}">${String(p.subscription_status || '').toLowerCase() === 'active' ? 'Actif' : 'Inactif'}</p>
                 </div>
             </div>
 
@@ -1024,6 +1189,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (passwordForm) {
         passwordForm.addEventListener('submit', submitAdminPassword);
     }
+
+    const providersSearch = document.getElementById('providers-search');
+    if (providersSearch) {
+        providersSearch.addEventListener('input', (e) => {
+            providersSearchQuery = e.target.value || '';
+            renderProviders(adminProvidersData);
+        });
+    }
+
+    const leadsSearch = document.getElementById('leads-search');
+    if (leadsSearch) {
+        leadsSearch.addEventListener('input', (e) => {
+            leadsSearchQuery = e.target.value || '';
+            renderLeads(adminLeadsData);
+        });
+    }
 });
 </script>
 JS;
@@ -1046,3 +1227,5 @@ $extraScript = str_replace('__ADMIN_VIEW__', addslashes($view), $extraScript);
 </div>
 
 <?php include __DIR__ . '/../includes/dashboard_layout_bottom.php'; ?>
+
+

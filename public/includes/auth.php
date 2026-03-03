@@ -54,6 +54,24 @@ function requireAuth(bool $requireVerified = true): void {
         header('Location: ' . $loginUrl . '?redirect=' . urlencode($path));
         exit;
     }
+
+    // Enforce role by protected area
+    $path = $_SERVER['REQUEST_URI'] ?? '';
+    $user = getCurrentUser();
+    $role = $user['role'] ?? '';
+
+    if (strpos($path, '/rappel/public/pro/') === 0 && $role !== 'provider') {
+        clearSession();
+        header('Location: /rappel/public/pro/login.php?error=' . urlencode('Session invalide pour l\'espace expert.'));
+        exit;
+    }
+
+    if (strpos($path, '/rappel/public/client/') === 0 && $role !== 'client') {
+        clearSession();
+        header('Location: /rappel/public/client/login.php?error=' . urlencode('Session invalide pour l\'espace client.'));
+        exit;
+    }
+
     if ($requireVerified && !isVerified()) {
         header('Location: /rappel/public/pro/verify.php');
         exit;

@@ -229,6 +229,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
                         class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-brand-400 outline-none text-sm font-bold text-slate-900 transition-all">
                 </div>
             </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Date souhaitée (optionnel)</label>
+                <input type="date" id="nr-preferred-date"
+                    class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-brand-400 outline-none text-sm font-bold text-slate-900 transition-all">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Document (optionnel)</label>
+                <input type="file" id="nr-doc" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                    class="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-brand-400 outline-none text-sm text-slate-700 transition-all file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-1 file:text-xs file:font-bold file:text-white hover:file:bg-brand-700">
+                <p class="mt-1 text-[10px] text-slate-400 font-medium">Formats: PDF, DOC/DOCX, XLS/XLSX, PNG, JPG (max 10MB).</p>
+            </div>
             <!-- Recap badge -->
             <div class="rounded-2xl bg-brand-50 border border-brand-100 p-3 flex items-center gap-3">
                 <span id="nr-recap-icon" class="text-2xl"></span>
@@ -356,15 +367,15 @@ function render(list) {
             <!-- Top info -->
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div class="flex items-center gap-3">
-                    <span class="pill bg-indigo-50 text-indigo-700 border-indigo-100">${escapeHtml(r.sector || 'Expertise')}</span>
-                    <span class="pill ${sCls}">${sLbl}</span>
+                    <span class="pill bg-indigo-50 text-indigo-700 border-indigo-100">${escapeHtml(normalizeDisplayText(r.sector || 'Expertise'))}</span>
+                    <span class="pill ${sCls}">${escapeHtml(normalizeDisplayText(sLbl))}</span>
                 </div>
                 <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest">${d}</span>
             </div>
 
             <!-- Content -->
             <div class="mb-8">
-                <h2 class="text-2xl font-black text-slate-900 mb-2">${escapeHtml(r.need || r.sector || 'Projet')}</h2>
+                <h2 class="text-2xl font-black text-slate-900 mb-2">${escapeHtml(normalizeDisplayText(r.need || r.sector || 'Projet'))}</h2>
                 ${r.address ? `<p class="flex items-center gap-2 text-sm text-slate-400 font-medium"><i data-lucide="map-pin" style="width:14px;height:14px;"></i> ${escapeHtml(r.address)}${r.city ? ' — ' + escapeHtml(r.city) : ''}</p>` : ''}
             </div>
 
@@ -405,6 +416,10 @@ const NR_TITLES = ['Votre secteur', 'Votre besoin', 'Vos coordonnées'];
 function openNewModal() {
     const ov = document.getElementById('nr-overlay');
     ov.classList.add('open');
+    const docInput = document.getElementById('nr-doc');
+    if (docInput) docInput.value = '';
+    const dateInput = document.getElementById('nr-preferred-date');
+    if (dateInput) dateInput.value = '';
     nrGoStep(1, false);
     document.getElementById('nr-error').classList.add('hidden');
     document.getElementById('nr-success').classList.add('hidden');
@@ -485,14 +500,26 @@ async function submitNr() {
     btn.disabled = true;
     btn.innerHTML = '<span style="width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;display:inline-block;animation:spin 1s linear infinite;"></span>';
     try {
-        await apiFetch('/leads', { method:'POST', body: JSON.stringify({
-            first_name: document.getElementById('nr-first').value.trim() || USER.first_name||'',
-            last_name:  document.getElementById('nr-last').value.trim()  || USER.last_name||'',
-            phone, email: USER.email||'', service_type: nrSectorID, need,
-            budget: parseInt(document.getElementById('nr-budget').value)||0,
-            zip_code: document.getElementById('nr-zip').value.trim(),
-            city: document.getElementById('nr-city').value.trim(),
-        })});
+        const formData = new FormData();
+        const firstName = document.getElementById('nr-first').value.trim() || USER.first_name || '';
+        const lastName = document.getElementById('nr-last').value.trim() || USER.last_name || '';
+        const fullName = `${firstName} ${lastName}`.trim() || 'Client';
+        formData.append('name', fullName);
+        formData.append('first_name', firstName);
+        formData.append('last_name', lastName);
+        formData.append('phone', phone);
+        formData.append('email', USER.email || '');
+        formData.append('service_type', nrSectorID);
+        formData.append('need', need);
+        formData.append('budget', parseInt(document.getElementById('nr-budget').value) || 0);
+        formData.append('preferred_date', document.getElementById('nr-preferred-date').value || '');
+        formData.append('zip_code', document.getElementById('nr-zip').value.trim());
+        formData.append('city', document.getElementById('nr-city').value.trim());
+        const docFile = document.getElementById('nr-doc').files[0];
+        if (docFile) {
+            formData.append('doc', docFile);
+        }
+        await apiFetch('/leads', { method:'POST', body: formData });
         // Success screen
         [1,2,3].forEach(n => document.getElementById(`nr-s${n}`).classList.add('hidden'));
         document.getElementById('nr-success').classList.remove('hidden');
@@ -511,16 +538,21 @@ function escapeHtml(v) {
     if(!v) return '';
     return String(v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[m]));
 }
+// text-normalization hook
+function normalizeDisplayText(value) {
+    if (value === null || value === undefined) return '';
+    return String(value).trim();
+}
 
 function getStep(s) {
-    const v=(s||'').toLowerCase();
-    if(v==='completed'||v==='closed') return{current:4,percent:100};
-    if(v==='quote_sent'||v==='confirmé'||v==='signe')  return{current:3,percent:66};
+    const v=(s||'').toLowerCase().trim();
+    if(v==='completed'||v==='closed'||v==='realise') return{current:4,percent:100};
+    if(v==='quote_sent'||v==='envoye'||v==='accepted'||v==='signe'||v==='confirmed'||v.startsWith('confirm')) return{current:3,percent:66};
     if(v==='assigned'||v==='assigne'||v==='processed') return{current:2,percent:33};
     return{current:1,percent:5};
 }
-function statusLabel(s){return({pending:'En attente',assigned:'Assigné',assigne:'Assigné',processed:'En traitement',quote_sent:'Devis envoyé',confirmé:'Devis validé',closed:'Terminé',completed:'Terminé',cancelled:'Annulé'})[(s||'').toLowerCase()]||s||'—';}
-function statusCls(s){const m=(s||'').toLowerCase();if(m==='closed'||m==='completed')return'bg-emerald-50 text-emerald-600 border-emerald-100';if(m==='cancelled')return'bg-red-50 text-red-500 border-red-100';if(m==='confirmé'||m==='signe'||m==='quote_sent')return'bg-brand-50 text-brand-600 border-brand-100';if(m==='processed'||m==='assigned'||m==='assigne')return'bg-amber-50 text-amber-600 border-amber-100';return'bg-slate-50 text-slate-400 border-slate-200';}
+function statusLabel(s){const k=(s||'').toLowerCase().trim();if(k==='accepted'||k==='signe'||k==='confirmed'||k.startsWith('confirm'))return'Devis valid\u00e9';return({pending:'En attente',assigned:'Assign\u00e9',assigne:'Assign\u00e9',processed:'En traitement',quote_sent:'Devis envoy\u00e9',envoye:'Devis envoy\u00e9',closed:'Termin\u00e9',completed:'R\u00e9alis\u00e9',realise:'R\u00e9alis\u00e9',cancelled:'Annul\u00e9'})[k]||s||'-';}
+function statusCls(s){const m=(s||'').toLowerCase().trim();if(m==='closed'||m==='completed'||m==='realise')return'bg-emerald-50 text-emerald-600 border-emerald-100';if(m==='cancelled')return'bg-red-50 text-red-500 border-red-100';if(m==='accepted'||m==='signe'||m==='confirmed'||m.startsWith('confirm')||m==='quote_sent'||m==='envoye')return'bg-brand-50 text-brand-600 border-brand-100';if(m==='processed'||m==='assigned'||m==='assigne')return'bg-amber-50 text-amber-600 border-amber-100';return'bg-slate-50 text-slate-400 border-slate-200';}
 </script>
 <!-- Bottom Navigation -->
 <nav class="bottom-nav">
@@ -532,12 +564,10 @@ function statusCls(s){const m=(s||'').toLowerCase();if(m==='closed'||m==='comple
         <i data-lucide="list" style="width:24px;height:24px;"></i>
         <span>Demandes</span>
     </a>
-    <div class="flex-1 relative flex justify-center">
-        <button onclick="openNewModal()" class="absolute -top-10 w-16 h-16 bg-[#0E1648] rounded-3xl flex items-center justify-center shadow-2xl shadow-brand-900/40 active:scale-90 transition-all group">
-            <i data-lucide="plus" class="text-white group-hover:scale-125 transition-transform" style="width:32px;height:32px;"></i>
-        </button>
-        <span class="text-[0.65rem] font-black text-slate-400 uppercase tracking-widest mt-8">Nouveau</span>
-    </div>
+    <a href="/rappel/public/client/quotes.php" class="bnav-btn">
+        <i data-lucide="file-text" style="width:24px;height:24px;"></i>
+        <span>Devis</span>
+    </a>
     <a href="/rappel/public/client/settings.php" class="bnav-btn">
         <i data-lucide="settings" style="width:24px;height:24px;"></i>
         <span>Profil</span>
@@ -552,3 +582,6 @@ function statusCls(s){const m=(s||'').toLowerCase();if(m==='closed'||m==='comple
 <?php include __DIR__ . '/../includes/cookie_banner.php'; ?>
 </body>
 </html>
+
+
+

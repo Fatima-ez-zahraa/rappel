@@ -39,6 +39,9 @@ CREATE TABLE IF NOT EXISTS leads (
     sector TEXT, -- 'Assurance', 'Rénovation', etc.
     need TEXT,
     budget DECIMAL(12, 2) DEFAULT 0,
+    time_slot TEXT,
+    preferred_date DATE,
+    doc_path TEXT,
     status TEXT DEFAULT 'pending', -- 'pending' | 'assigned' | 'completed'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -61,6 +64,7 @@ CREATE TABLE IF NOT EXISTS quotes (
     amount DECIMAL(12, 2),
     items_count INTEGER DEFAULT 1,
     status TEXT DEFAULT 'attente_client', -- 'attente_client' | 'signe' | 'refuse'
+    doc_path TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -76,6 +80,14 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 5b. Table: quote_documents
+CREATE TABLE IF NOT EXISTS quote_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quote_id UUID REFERENCES quotes(id) ON DELETE CASCADE,
+    doc_path TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indices for performance
 CREATE INDEX IF NOT EXISTS idx_user_email ON user_profiles(email);
 CREATE INDEX IF NOT EXISTS idx_user_siret ON user_profiles(siret);
@@ -83,6 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_lead_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_lead_sector ON leads(sector);
 CREATE INDEX IF NOT EXISTS idx_assignment_provider ON lead_assignments(provider_id);
 CREATE INDEX IF NOT EXISTS idx_quote_provider ON quotes(provider_id);
+CREATE INDEX IF NOT EXISTS idx_quote_documents_quote_id ON quote_documents(quote_id);
 
 -- Initial Data Seeding
 INSERT INTO subscription_plans (name, stripe_price_id, price, features)

@@ -14,7 +14,11 @@ if (isLoggedIn() && isVerified()) {
 }
 $pageTitle = 'Espace Particulier - Connexion';
 $redirect = $_GET['redirect'] ?? '/rappel/public/client/dashboard.php';
+if (strpos($redirect, '/rappel/public/client/') !== 0) {
+    $redirect = '/rappel/public/client/dashboard.php';
+}
 $email = $_GET['email'] ?? '';
+$loginError = $_GET['error'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -77,9 +81,9 @@ $email = $_GET['email'] ?? '';
                     </div>
                 </div>
 
-                <div id="login-error" class="form-error hidden">
+                <div id="login-error" class="form-error <?= $loginError ? '' : 'hidden' ?>">
                     <span class="w-1.5 h-1.5 rounded-full bg-red-600 flex-shrink-0"></span>
-                    <span id="login-error-text"></span>
+                    <span id="login-error-text"><?= htmlspecialchars($loginError ?: '') ?></span>
                 </div>
 
                 <button type="submit" id="login-btn"
@@ -134,11 +138,15 @@ async function handleLogin(e) {
             body: JSON.stringify({
                 email: document.getElementById('login-email').value,
                 password: document.getElementById('login-password').value,
+                expected_role: 'client'
             })
         });
 
         const token = data.session?.access_token || data.token || '';
         const user = data.user || {};
+        if (user.role !== 'client') {
+            throw new Error('Ce compte n\'est pas autorisé sur l\'espace client.');
+        }
 
         // Store in PHP session
         await fetch('/rappel/public/api-session.php', {
@@ -151,14 +159,7 @@ async function handleLogin(e) {
         Auth.setToken(token);
         Auth.setUser(user);
 
-        // Redirect based on role
-        if (user.role === 'admin') {
-            window.location.href = '/rappel/public/admin/dashboard.php';
-        } else if (user.role === 'provider') {
-            window.location.href = '/rappel/public/pro/dashboard.php';
-        } else {
-            window.location.href = REDIRECT_URL;
-        }
+        window.location.href = REDIRECT_URL;
 
     } catch (err) {
         errText.textContent = err.message || 'Identifiants invalides.';

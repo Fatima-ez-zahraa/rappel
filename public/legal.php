@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/auth.php';
 $pageTitle = 'Mentions Légales & Politiques';
 ?>
@@ -31,7 +31,7 @@ $pageTitle = 'Mentions Légales & Politiques';
                 Informations <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Légales</span>
             </h1>
             <p class="text-xl text-navy-600/80 font-medium max-w-2xl mx-auto leading-relaxed">
-                Transparence et protection. Retrouvez l'ensemble des règles régissant notre plateforme et vos données.
+                Transparence et protection. Retrouvez l'ensemble des régles réagissant notre plateforme et vos données.
             </p>
         </div>
 
@@ -134,49 +134,82 @@ $pageTitle = 'Mentions Légales & Politiques';
                         </div>
                     </div>
 
-                    <div class="prose prose-navy max-w-none space-y-10 text-navy-900 leading-relaxed">
-                        <div class="space-y-6">
-                            <h3 class="text-xl font-bold flex items-center gap-3">1. Responsable du traitement</h3>
-                            <p>Le service <strong>rappellez-moi.co</strong> est édité par <strong>YLN DEVELOPPEMENT SAS</strong>. Nous nous engageons à protéger vos données personnelles conformément au Règlement Général sur la Protection des Données (RGPD).</p>
+                    <div class="prose prose-navy max-w-none space-y-8 text-navy-900 leading-relaxed">
+                        <div class="rounded-3xl border border-indigo-100 bg-indigo-50/40 p-6 lg:p-8 not-prose">
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500 mb-4">Aperçu Rapide</p>
+                            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div class="rounded-2xl bg-white border border-indigo-100 px-4 py-3 text-sm font-semibold text-navy-800">Responsable: YLN DEVELOPPEMENT SAS</div>
+                                <div class="rounded-2xl bg-white border border-indigo-100 px-4 py-3 text-sm font-semibold text-navy-800">Partage: 3 à 5 partenaires</div>
+                                <div class="rounded-2xl bg-white border border-indigo-100 px-4 py-3 text-sm font-semibold text-navy-800">Conservation limitée</div>
+                                <div class="rounded-2xl bg-white border border-indigo-100 px-4 py-3 text-sm font-semibold text-navy-800">Droits RGPD garantis</div>
+                            </div>
                         </div>
 
-                        <div class="bg-indigo-50/30 p-8 rounded-3xl border border-indigo-100/50 grid md:grid-cols-2 gap-10">
-                            <div>
-                                <h4 class="text-sm font-bold uppercase text-indigo-600 mb-4 tracking-widest">Données collectées</h4>
+                        <div class="space-y-6 rounded-3xl border border-navy-100 bg-white p-6 lg:p-8">
+                            <h3 class="text-xl font-bold mb-2">1. Responsable du traitement et définition du Service</h3>
+                            <p>Le service <strong>rappelez-moi.co</strong> (ci-après le « Service ») est édité par <strong>YLN DEVELOPPEMENT SAS</strong>, société par actions simplifiée immatriculée au RCS de Versailles sous le numéro 840 321 384.</p>
+                            <p>Le Service agit comme responsable du traitement des données collectées via ses formulaires.</p>
+                        </div>
+
+                        <div class="space-y-6 rounded-3xl border border-navy-100 bg-white p-6 lg:p-8">
+                            <h3 class="text-xl font-bold mb-2">2. Données collectées</h3>
+                            <p>Le Service peut collecter :</p>
+                            <div class="not-prose grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">nom</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">prénom</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">téléphone</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">email</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">adresse</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">contenu de la demande</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">adresse IP</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">horodatage</div>
+                                <div class="rounded-xl border border-navy-100 bg-navy-50/40 px-4 py-2 text-sm font-semibold text-navy-700">preuve du consentement</div>
+                            </div>
+                        </div>
+
+                        <div class="grid lg:grid-cols-2 gap-6 not-prose">
+                            <div class="rounded-3xl border border-navy-100 bg-white p-6 lg:p-8">
+                                <h3 class="text-xl font-bold mb-4 text-navy-900">3. Finalité</h3>
                                 <ul class="space-y-3">
-                                    <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> Identité (Nom, Prénom)</li>
-                                    <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> Contact (Tel, Email, CP)</li>
-                                    <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> Métadonnées (IP, Date)</li>
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 text-emerald-500"></i><span>permettre la mise en relation</span></li>
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 text-emerald-500"></i><span>transmettre la demande aux partenaires</span></li>
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 text-emerald-500"></i><span>assurer la conformité légale</span></li>
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 text-emerald-500"></i><span>sécuriser le Service</span></li>
                                 </ul>
                             </div>
-                            <div>
-                                <h4 class="text-sm font-bold uppercase text-indigo-600 mb-4 tracking-widest">Base Légale</h4>
-                                <p class="text-sm leading-relaxed font-medium">Le traitement repose sur l'<strong>intérêt légitime</strong> de répondre à votre demande et le <strong>consentement</strong> explicite recueilli lors de l'envoi du formulaire.</p>
-                                <p class="text-sm">L’utilisation du Service implique l’acceptation des CONDITIONS GÉNÉRALES D’UTILISATION. En validant, vous acceptez notre POLITIQUE DE CONFIDENTIALITÉ.</p>
+                            <div class="rounded-3xl border border-navy-100 bg-white p-6 lg:p-8">
+                                <h3 class="text-xl font-bold mb-4 text-navy-900">4. Base légale</h3>
+                                <ul class="space-y-3">
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="scale" class="w-4 h-4 mt-0.5 text-indigo-500"></i><span>le consentement</span></li>
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="scale" class="w-4 h-4 mt-0.5 text-indigo-500"></i><span>l’exécution du Service</span></li>
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="scale" class="w-4 h-4 mt-0.5 text-indigo-500"></i><span>l’intérêt légitime</span></li>
+                                    <li class="flex items-start gap-3 text-sm font-medium text-navy-700"><i data-lucide="scale" class="w-4 h-4 mt-0.5 text-indigo-500"></i><span>les obligations légales</span></li>
+                                </ul>
                             </div>
                         </div>
 
-                        <div class="space-y-6">
-                            <h3 class="text-xl font-bold">2. Vos droits</h3>
-                            <p>En vertu de la loi « Informatique et Libertés » et du RGPD, vous disposez des droits suivants sur vos données :</p>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div class="p-4 rounded-2xl bg-white border border-navy-100 text-center">
-                                    <div class="text-indigo-500 mb-2 mx-auto"><i data-lucide="eye" class="w-5 h-5 mx-auto"></i></div>
-                                    <span class="text-[10px] font-black uppercase">Accès</span>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-white border border-navy-100 text-center">
-                                    <div class="text-emerald-500 mb-2 mx-auto"><i data-lucide="edit-3" class="w-5 h-5 mx-auto"></i></div>
-                                    <span class="text-[10px] font-black uppercase">Rectif.</span>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-white border border-navy-100 text-center">
-                                    <div class="text-red-500 mb-2 mx-auto"><i data-lucide="trash-2" class="w-5 h-5 mx-auto"></i></div>
-                                    <span class="text-[10px] font-black uppercase">Oubli</span>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-white border border-navy-100 text-center">
-                                    <div class="text-orange-500 mb-2 mx-auto"><i data-lucide="lock" class="w-5 h-5 mx-auto"></i></div>
-                                    <span class="text-[10px] font-black uppercase">Limit.</span>
-                                </div>
+                        <div class="space-y-6 rounded-3xl border border-navy-100 bg-white p-6 lg:p-8">
+                            <h3 class="text-xl font-bold mb-2">5. Transmission aux partenaires</h3>
+                            <p>Les données peuvent être transmises aux partenaires concernés, dans la limite de 3 à 5 partenaires selon votre choix.</p>
+                            <p>Ces partenaires deviennent responsables indépendants du traitement.</p>
+                        </div>
+
+                        <div class="space-y-6 rounded-3xl border border-navy-100 bg-white p-6 lg:p-8">
+                            <h3 class="text-xl font-bold mb-2">6. Conservation</h3>
+                            <p>Les données sont conservées pendant une durée limitée et conforme aux obligations légales.</p>
+                        </div>
+
+                        <div class="space-y-6 rounded-3xl border border-navy-100 bg-white p-6 lg:p-8">
+                            <h3 class="text-xl font-bold mb-2">7. Droits des utilisateurs</h3>
+                            <p>L’utilisateur dispose des droits suivants :</p>
+                            <div class="not-prose grid grid-cols-2 md:grid-cols-5 gap-3">
+                                <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-center text-xs font-black uppercase tracking-wide text-indigo-700">accès</div>
+                                <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-center text-xs font-black uppercase tracking-wide text-indigo-700">rectification</div>
+                                <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-center text-xs font-black uppercase tracking-wide text-indigo-700">suppression</div>
+                                <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-center text-xs font-black uppercase tracking-wide text-indigo-700">limitation</div>
+                                <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-center text-xs font-black uppercase tracking-wide text-indigo-700">opposition</div>
                             </div>
+                            <p>Le Service met en œuvre des mesures techniques et organisationnelles appropriées.</p>
                         </div>
                     </div>
                 </section>
@@ -195,18 +228,102 @@ $pageTitle = 'Mentions Légales & Politiques';
 
                     <div class="prose prose-navy max-w-none space-y-10 text-navy-900 leading-relaxed">
                         <div class="space-y-6">
-                            <h3 class="text-xl font-bold mb-4">Article 1 - Objet</h3>
-                            <p>Les présentes CONDITIONS GÉNÉRALES D’UTILISATION régissent l'utilisation de la plateforme <strong>rappelez-moi.co</strong>. Elles ont pour objet de définir les modalités de mise en relation entre les utilisateurs et les professionnels.</p>
-                        </div>
-                        
-                        <div class="p-8 bg-emerald-50/30 rounded-3xl border border-emerald-100/50">
-                            <h3 class="text-xl font-bold mb-4">Article 2 - Responsabilité</h3>
-                            <p><strong>Rappelez-moi.co</strong> agit en qualité d'intermédiaire. À ce titre, nous ne sommes pas responsables de la qualité, du prix ou du retard d'exécution des services fournis par nos partenaires professionnels. Le contrat de prestation de service intervient exclusivement entre l'utilisateur et le professionnel désigné.</p>
+                            <h3 class="text-xl font-bold mb-4">Article 1 - Identification de l'éditeur et définition du Service</h3>
+                            <p>Le service accessible à l’adresse <strong>rappelez-moi.co</strong> (ci-après le « Service ») est édité par <strong>YLN DEVELOPPEMENT SAS</strong>, société par actions simplifiée immatriculée au Registre du Commerce et des Sociétés de Versailles sous le numéro 840 321 384, dont le siège social est situé 1 bis rue de l’Étang de la Tour, 78120 Rambouillet, France.</p>
+                            <p>Le « Service » désigne l’ensemble des fonctionnalités accessibles via <strong>rappelez-moi.co</strong> permettant la mise en relation entre utilisateurs et professionnels partenaires.</p>
+                            <p>Toute référence au « Service » inclut :</p>
+                            <ul>
+                                <li>le site internet,</li>
+                                <li>les fonctionnalités,</li>
+                                <li>les formulaires,</li>
+                                <li>les systèmes de mise en relation.</li>
+                            </ul>
                         </div>
 
                         <div class="space-y-6">
-                            <h3 class="text-xl font-bold mb-4">Article 3 - Propriété Intellectuelle</h3>
-                            <p>L’intégralité des contenus du Service (logos, textes, graphisme) est protégée par le droit d'auteur. Toute reproduction sans autorisation est interdite.</p>
+                            <h3 class="text-xl font-bold mb-4">Article 2 - Objet du Service</h3>
+                            <p>Le Service permet aux utilisateurs de solliciter volontairement la mise en relation avec des professionnels partenaires.</p>
+                            <p>Le Service agit exclusivement comme intermédiaire technique de mise en relation.</p>
+                            <p>Le Service ne fournit aucune prestation commerciale, technique ou professionnelle autre que la mise en relation.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 3 - Acceptation des conditions</h3>
+                            <p>L’utilisation du Service implique l’acceptation pleine et entière des présentes conditions.</p>
+                            <p>L’utilisateur reconnaît :</p>
+                            <ul>
+                                <li>être majeur,</li>
+                                <li>fournir des informations exactes,</li>
+                                <li>agir de bonne foi.</li>
+                            </ul>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 4 - Conformité à la réglementation sur le démarchage téléphonique</h3>
+                            <p>Le Service repose exclusivement sur une démarche active et volontaire de l’utilisateur.</p>
+                            <p>En soumettant une demande, l’utilisateur :</p>
+                            <ul>
+                                <li>sollicite explicitement un contact,</li>
+                                <li>consent à être rappelé,</li>
+                                <li>accepte d’être contacté dans le cadre de sa demande.</li>
+                            </ul>
+                            <p>Ce consentement constitue une base légale conforme à la réglementation applicable au démarchage téléphonique.</p>
+                            <p>Le Service conserve la preuve du consentement conformément aux obligations légales et réglementaires.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 5 - Nature du Service</h3>
+                            <p>Le Service agit exclusivement comme intermédiaire technique.</p>
+                            <p>Le Service :</p>
+                            <ul>
+                                <li>ne fournit pas les prestations proposées,</li>
+                                <li>n’est pas mandataire,</li>
+                                <li>n’est pas agent commercial,</li>
+                                <li>n’est pas responsable des prestations.</li>
+                            </ul>
+                            <p>Toute relation contractuelle est établie exclusivement entre l’utilisateur et le professionnel partenaire.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 6 - Responsabilité</h3>
+                            <p>Le Service est soumis à une obligation de moyens.</p>
+                            <p>Le Service ne garantit pas :</p>
+                            <ul>
+                                <li>le contact par un professionnel,</li>
+                                <li>le délai de contact,</li>
+                                <li>la qualité des prestations.</li>
+                            </ul>
+                            <p>Le Service ne pourra être tenu responsable des dommages indirects.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 7 - Utilisation conforme</h3>
+                            <p>L’utilisateur s’engage à ne pas :</p>
+                            <ul>
+                                <li>fournir de fausses informations,</li>
+                                <li>utiliser le Service de manière abusive,</li>
+                                <li>utiliser des systèmes automatisés.</li>
+                            </ul>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 8 - Suspension ou interruption</h3>
+                            <p>Le Service peut être suspendu ou interrompu à tout moment.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 9 - Données personnelles</h3>
+                            <p>Le Service collecte et traite des données conformément à la politique de confidentialité.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 10 - Modification</h3>
+                            <p>Les présentes conditions peuvent être modifiées à tout moment.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold mb-4">Article 11 - Droit applicable</h3>
+                            <p>Les présentes conditions sont soumises au droit français.</p>
                         </div>
                     </div>
                 </section>
@@ -282,3 +399,7 @@ $pageTitle = 'Mentions Légales & Politiques';
 </script>
 </body>
 </html>
+
+
+
+

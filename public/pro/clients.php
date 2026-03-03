@@ -542,6 +542,9 @@ function openClientDetails(nameEncoded) {
                     <div>
                         <p class="text-sm font-bold text-navy-950">${escapeHtml(q.project_name || 'Projet sans nom')}</p>
                         <p class="text-[10px] text-navy-400 font-black uppercase tracking-widest mt-1">${new Date(q.created_at).toLocaleDateString('fr-FR')}</p>
+                        <a href="/rappel/public/quote-view.php?id=${encodeURIComponent(q.id)}" class="inline-flex mt-2 text-[10px] font-black uppercase tracking-widest text-brand-700 hover:text-brand-600 transition-colors">
+                            Voir devis
+                        </a>
                     </div>
                     <div class="text-right">
                         <p class="text-sm font-black text-brand-600">${parseFloat(q.amount).toLocaleString()} €</p>

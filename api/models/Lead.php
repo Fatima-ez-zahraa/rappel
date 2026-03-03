@@ -16,6 +16,8 @@ class Lead
     public $need;
     public $budget;
     public $time_slot;
+    public $preferred_date;
+    public $doc_path;
     public $user_id;
     public $status;
     public $created_at;
@@ -23,6 +25,100 @@ class Lead
     public function __construct($db)
     {
         $this->conn = $db;
+    }
+
+    private function normalizeSectors($sectorsInput)
+    {
+        if (is_array($sectorsInput)) {
+            $values = $sectorsInput;
+        } else {
+            $raw = trim((string)$sectorsInput);
+            if ($raw === '') {
+                return [];
+            }
+
+            $decoded = json_decode($raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $values = $decoded;
+            } else {
+                $values = preg_split('/[;,|]/', $raw);
+            }
+        }
+
+        $normalized = [];
+        foreach ($values as $v) {
+            $val = trim((string)$v);
+            if ($val === '') {
+                continue;
+            }
+            foreach ($this->expandSectorAliases($val) as $alias) {
+                $normalized[] = $alias;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    private function normalizeSectorKey($value)
+    {
+        $raw = trim((string)$value);
+        if ($raw === '') {
+            return '';
+        }
+
+        $lower = function_exists('mb_strtolower') ? mb_strtolower($raw, 'UTF-8') : strtolower($raw);
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $lower);
+        $ascii = $ascii !== false ? strtolower($ascii) : $lower;
+        $ascii = preg_replace('/[^a-z0-9]+/', '', $ascii);
+
+        $map = [
+            'assurance' => 'assurance',
+            'assurances' => 'assurance',
+            'renovation' => 'renovation',
+            'renovations' => 'renovation',
+            'energie' => 'energie',
+            'energies' => 'energie',
+            'finance' => 'finance',
+            'finances' => 'finance',
+            'garage' => 'garage',
+            'garages' => 'garage',
+            'telecom' => 'telecom',
+            'telecoms' => 'telecom',
+            'general' => 'general',
+            'generale' => 'general',
+            'generaliste' => 'general'
+        ];
+
+        return $map[$ascii] ?? $ascii;
+    }
+
+    private function expandSectorAliases($value)
+    {
+        $key = $this->normalizeSectorKey($value);
+        if ($key === '') {
+            return [];
+        }
+
+        $aliases = [
+            'assurance' => ['assurance', 'assurances'],
+            'renovation' => ['renovation', 'renovations', 'rénovation', 'rénovations'],
+            'energie' => ['energie', 'energies', 'énergie', 'énergies'],
+            'finance' => ['finance', 'finances'],
+            'garage' => ['garage', 'garages'],
+            'telecom' => ['telecom', 'telecoms', 'télécom', 'télécoms'],
+            'general' => ['general', 'général', 'generale', 'générale', 'generaliste', 'généraliste']
+        ];
+
+        if (!isset($aliases[$key])) {
+            return [$key];
+        }
+
+        $expanded = [];
+        foreach ($aliases[$key] as $alias) {
+            $expanded[] = function_exists('mb_strtolower') ? mb_strtolower($alias, 'UTF-8') : strtolower($alias);
+        }
+
+        return array_values(array_unique($expanded));
     }
 
     public function read($provider_id = null)
@@ -52,8 +148,8 @@ class Lead
     }
 
     public function readRecommended($sectorsJson, $provider_id = null) {
-        $sectors = @json_decode($sectorsJson, true);
-        if (empty($sectors) || !is_array($sectors)) return $this->read($provider_id);
+        $sectors = $this->normalizeSectors($sectorsJson);
+        if (empty($sectors)) return $this->read($provider_id);
 
         $placeholders = implode(',', array_fill(0, count($sectors), '?'));
         $query = "SELECT l.*, 
@@ -65,7 +161,7 @@ class Lead
                   FROM " . $this->table_name . " l
                   LEFT JOIN lead_assignments la ON l.id = la.lead_id
                   LEFT JOIN user_profiles cp ON l.user_id = cp.id
-                  WHERE l.sector IN ($placeholders) ";
+                  WHERE LOWER(TRIM(COALESCE(l.sector, ''))) IN ($placeholders) ";
         
         if ($provider_id) {
             $query .= " AND (la.provider_id IS NULL OR la.provider_id = ?) ";
@@ -80,6 +176,49 @@ class Lead
         }
         if ($provider_id) {
             $stmt->bindValue($idx, $provider_id);
+        }
+        $stmt->execute();
+        return $stmt;
+    }
+
+    public function readByProviderSectors($provider_id, $sectorsInput)
+    {
+        $sectors = $this->normalizeSectors($sectorsInput);
+        if (empty($sectors)) {
+            $query = "SELECT l.*, 
+                             la.provider_id as assigned_to,
+                             cp.first_name AS client_first_name, 
+                             cp.last_name AS client_last_name,
+                             cp.phone AS client_profile_phone,
+                             cp.city AS client_profile_city
+                      FROM " . $this->table_name . " l
+                      LEFT JOIN lead_assignments la ON l.id = la.lead_id
+                      LEFT JOIN user_profiles cp ON l.user_id = cp.id
+                      WHERE 1 = 0";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($sectors), '?'));
+        $query = "SELECT l.*, 
+                         la.provider_id as assigned_to,
+                         cp.first_name AS client_first_name, 
+                         cp.last_name AS client_last_name,
+                         cp.phone AS client_profile_phone,
+                         cp.city AS client_profile_city
+                  FROM " . $this->table_name . " l
+                  LEFT JOIN lead_assignments la ON l.id = la.lead_id
+                  LEFT JOIN user_profiles cp ON l.user_id = cp.id
+                  WHERE (la.provider_id IS NULL OR la.provider_id = ?)
+                    AND LOWER(TRIM(COALESCE(l.sector, ''))) IN ($placeholders)
+                  ORDER BY l.created_at DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $idx = 1;
+        $stmt->bindValue($idx++, $provider_id);
+        foreach ($sectors as $sector) {
+            $stmt->bindValue($idx++, $sector);
         }
         $stmt->execute();
         return $stmt;
@@ -100,6 +239,8 @@ class Lead
                     need = :need,
                     budget = :budget,
                     time_slot = :time_slot,
+                    preferred_date = :preferred_date,
+                    doc_path = :doc_path,
                     user_id = :user_id,
                     status = :status";
 
@@ -122,6 +263,8 @@ class Lead
         $stmt->bindParam(':need', $this->need);
         $stmt->bindParam(':budget', $this->budget);
         $stmt->bindParam(':time_slot', $this->time_slot);
+        $stmt->bindParam(':preferred_date', $this->preferred_date);
+        $stmt->bindParam(':doc_path', $this->doc_path);
         $stmt->bindParam(':user_id', $this->user_id);
         $stmt->bindParam(':status', $this->status);
 
